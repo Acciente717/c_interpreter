@@ -19,11 +19,36 @@ namespace cint
 using varName = std::string;
 using funcName = std::string;
 
-struct cmdSeq;
+struct command;
 
 /*******************************************************************
  *                   Definition of Structures                      *
  ******************************************************************/
+
+/**
+ *  Types of all command sequences.
+ * 
+ *  function - commands in a function
+ *  loop     - commands in a loop block
+ *  branch   - commands when testing a sequence of judgement
+ *  normal   - commands enclosed by a pair of `{ ... }`
+ */
+enum class cmdSeqType
+{
+    function,
+    loop,
+    branch,
+    normal
+};
+
+/**
+ *  A sequence of commands.
+ */
+struct cmdSeq
+{
+    cmdSeqType type;
+    std::vector<command> cmds;
+};
 
 /**
  *  Types of all possible intermediate commands.
@@ -229,31 +254,6 @@ struct command
     command(const command &other) = delete;
     command& operator=(command &&other) = delete;
     command& operator=(const command &other) = delete;
-};
-
-/**
- *  Types of all command sequences.
- * 
- *  function - commands in a function
- *  loop     - commands in a loop block
- *  branch   - commands when testing a sequence of judgement
- *  normal   - commands enclosed by a pair of `{ ... }`
- */
-enum class cmdSeqType
-{
-    function,
-    loop,
-    branch,
-    normal
-};
-
-/**
- *  A sequence of commands.
- */
-struct cmdSeq
-{
-    cmdSeqType type;
-    std::vector<command> cmds;
 };
 
 /*******************************************************************

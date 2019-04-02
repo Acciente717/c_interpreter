@@ -12,48 +12,37 @@ command::~command()
     switch (type)
     {
     case cmdType::unaryOperation:
-        unaryOprType *punary = reinterpret_cast<unaryOprType *>(opr);
-        delete punary;
+        delete reinterpret_cast<unaryOprType *>(opr);
         break;
     case cmdType::binaryOperation:
-        binaryOprType *pbinary = reinterpret_cast<binaryOprType *>(opr);
-        delete pbinary;
+        delete reinterpret_cast<binaryOprType *>(opr);
         break;
     case cmdType::ternaryOperation:
-        ternaryOprType *pternary = reinterpret_cast<ternaryOprType *>(opr);
-        delete pternary;
+        delete reinterpret_cast<ternaryOprType *>(opr);
         break;
     case cmdType::functionCall:
-        funcCallOperation *pfcall = reinterpret_cast<funcCallOperation *>(opr);
-        delete pfcall;
+        delete reinterpret_cast<funcCallOperation *>(opr);
         break;
     case cmdType::functionReturn:
-        funcRetOperation *pfret = reinterpret_cast<funcRetOperation *>(opr);
-        delete pfret;
+        delete reinterpret_cast<funcRetOperation *>(opr);
         break;
     case cmdType::loopContinue:
-        loopContOperation *plcont = reinterpret_cast<loopContOperation *>(opr);
-        delete plcont;
+        delete reinterpret_cast<loopContOperation *>(opr);
         break;
     case cmdType::loopBreak:
-        loopBrkOperation *lbrk = reinterpret_cast<loopBrkOperation *>(opr);
-        delete lbrk;
+        delete reinterpret_cast<loopBrkOperation *>(opr);
         break;
     case cmdType::branchBlock:
-        branchBlkOperation *pbblk = reinterpret_cast<branchBlkOperation *>(opr);
-        delete pbblk;
+        delete reinterpret_cast<branchBlkOperation *>(opr);
         break;
     case cmdType::branchBreak:
-        branchBrkOperation *pbbrk = reinterpret_cast<branchBrkOperation *>(opr);
-        delete pbbrk;
+        delete reinterpret_cast<branchBrkOperation *>(opr);
         break;
     case cmdType::normalBlock:
-        normalBlkOperation *pnblk = reinterpret_cast<normalBlkOperation *>(opr);
-        delete pnblk;
+        delete reinterpret_cast<normalBlkOperation *>(opr);
         break;
     case cmdType::conditionalBlock:
-        condBlkOperation *pcblk = reinterpret_cast<condBlkOperation *>(opr);
-        delete pcblk;
+        delete reinterpret_cast<condBlkOperation *>(opr);
         break;
     default:
         std::cerr << "Fatal error: unknown command type while destructing"
