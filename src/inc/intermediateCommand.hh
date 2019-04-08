@@ -1,5 +1,6 @@
-#ifndef __INTERMEDIATE_COMMAND_HH__
-#define __INTERMEDIATE_COMMAND_HH__
+/* Copyright @2019 Zhiyao Ma */
+#ifndef SRC_INC_INTERMEDIATE_COMMAND_HH_
+#define SRC_INC_INTERMEDIATE_COMMAND_HH_
 
 #include <string>
 #include <memory>
@@ -18,6 +19,7 @@ namespace cint
 
 using varName = std::string;
 using funcName = std::string;
+using typeName = std::string;
 
 struct command;
 
@@ -55,6 +57,7 @@ struct cmdSeq
  */
 enum class cmdType
 {
+    empty,
     unaryOperation,
     binaryOperation,
     ternaryOperation,
@@ -65,7 +68,8 @@ enum class cmdType
     branchBreak,
     branchBlock,
     normalBlock,
-    conditionalBlock
+    conditionalBlock,
+    declareVariable
 };
 
 /**
@@ -81,7 +85,7 @@ enum class unaryOprType
  */
 enum class binaryOprType
 {
-
+    assign
 };
 
 /**
@@ -112,7 +116,9 @@ enum class ternaryOprType
     assignGreater,
     assignGreaterEqual,
     assignEqual,
-    assignNotEqual
+    assignNotEqual,
+    assignLogicAnd,
+    assignLogicOr
 };
 
 /**
@@ -233,27 +239,51 @@ struct condBlkOperation
     cmdSeq cmdseq;
 };
 
+/**
+ *  Declare a new variable.
+ */
+struct declVarOperation
+{
+    typeName type;
+    varName var;
+};
+
 struct command
 {
     cmdType type;
     void *opr;
-    
-    inline explicit command(cmdType type, std::unique_ptr<unaryOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<binaryOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<ternaryOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<funcCallOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<funcRetOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<loopContOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<loopBrkOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<branchBlkOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<branchBrkOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<normalBlkOperation> opr);
-    inline explicit command(cmdType type, std::unique_ptr<condBlkOperation> opr);
+
+    inline explicit command(cmdType type,
+                            std::unique_ptr<unaryOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<binaryOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<ternaryOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<funcCallOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<funcRetOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<loopContOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<loopBrkOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<branchBlkOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<branchBrkOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<normalBlkOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<condBlkOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<declVarOperation> opr);
+    inline command() : type(cmdType::empty), opr(nullptr) {}
     ~command();
-    command(command &&other) = delete;
+    command(command &&other);
     command(const command &other) = delete;
-    command& operator=(command &&other) = delete;
+    command& operator=(command &&other);
     command& operator=(const command &other) = delete;
+    void releaseMemory();
 };
 
 /*******************************************************************
@@ -262,147 +292,163 @@ struct command
 
 command::command(cmdType _type, std::unique_ptr<unaryOperation> _opr)
 {
-    iferr (type != cmdType::unaryOperation)
+    iferr (_type != cmdType::unaryOperation)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating unary operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating unary operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<binaryOperation> _opr)
 {
-    iferr (type != cmdType::binaryOperation)
+    iferr (_type != cmdType::binaryOperation)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating binary operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating binary operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<ternaryOperation> _opr)
 {
-    iferr (type != cmdType::ternaryOperation)
+    iferr (_type != cmdType::ternaryOperation)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating ternary operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr)) {
+        std::cerr << _opr.get() << std::endl;
+        std::cerr.flush();
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating ternary operation!");
-    
+    }
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<funcCallOperation> _opr)
 {
-    iferr (type != cmdType::functionCall)
+    iferr (_type != cmdType::functionCall)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating function call operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating function call operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<funcRetOperation> _opr)
 {
-    iferr (type != cmdType::functionReturn)
+    iferr (_type != cmdType::functionReturn)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating function return operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating function return operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<loopContOperation> _opr)
 {
-    iferr (type != cmdType::loopContinue)
+    iferr (_type != cmdType::loopContinue)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating loop continue operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating loop continue operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<loopBrkOperation> _opr)
 {
-    iferr (type != cmdType::loopBreak)
+    iferr (_type != cmdType::loopBreak)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating loop break operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating loop break operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<branchBlkOperation> _opr)
 {
-    iferr (type != cmdType::branchBlock)
+    iferr (_type != cmdType::branchBlock)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating branch block operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating branch block operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<branchBrkOperation> _opr)
 {
-    iferr (type != cmdType::branchBreak)
+    iferr (_type != cmdType::branchBreak)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating branch break operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating branch break operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<normalBlkOperation> _opr)
 {
-    iferr (type != cmdType::loopBreak)
+    iferr (_type != cmdType::normalBlock)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating normal block operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating normal block operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
 command::command(cmdType _type, std::unique_ptr<condBlkOperation> _opr)
 {
-    iferr (type != cmdType::loopBreak)
+    iferr (_type != cmdType::conditionalBlock)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating conditional block operation!");
-    iferr (static_cast<bool>(_opr))
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating conditional block operation!");
-    
+
     type = _type;
     opr = _opr.release();
 }
 
+command::command(cmdType _type, std::unique_ptr<declVarOperation> _opr)
+{
+    iferr (_type != cmdType::declareVariable)
+        throw cmdCreationError("Error: argument mismatch"
+                               " while creating declare variable operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument"
+                               " while creating declare variable operation!");
+
+    type = _type;
+    opr = _opr.release();
 }
 
-#endif
+}  // namespace cint
+
+#endif  // SRC_INC_INTERMEDIATE_COMMAND_HH_

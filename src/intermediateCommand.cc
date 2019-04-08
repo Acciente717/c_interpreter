@@ -7,7 +7,7 @@
 namespace cint
 {
 
-command::~command()
+void command::releaseMemory()
 {
     switch (type)
     {
@@ -44,11 +44,38 @@ command::~command()
     case cmdType::conditionalBlock:
         delete reinterpret_cast<condBlkOperation *>(opr);
         break;
+    case cmdType::empty:
+        opr = nullptr;
+        break;
     default:
         std::cerr << "Fatal error: unknown command type while destructing"
                   << " the command" << std::endl;
         std::terminate();
     }
+}
+
+command::~command()
+{
+    releaseMemory();
+}
+
+command::command(command &&other)
+{
+    releaseMemory();
+    type = other.type;
+    opr = other.opr;
+    other.type = cmdType::empty;
+    other.opr = nullptr;
+}
+
+command& command::operator=(command &&other)
+{
+    releaseMemory();
+    type = other.type;
+    opr = other.opr;
+    other.type = cmdType::empty;
+    other.opr = nullptr;
+    return *this;
 }
 
 }  // namespace cint
