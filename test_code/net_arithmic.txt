@@ -1,0 +1,10 @@
+{
+    a = b + c;
+    x = p - q / r + s;
+    {
+        boom = foo && bar;
+        hello = wor || ld;
+    }
+    exit = ex + it;
+}
+

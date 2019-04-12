@@ -1,0 +1,10 @@
+{
+    a = b + c;
+    if (a + x == y)
+    {
+        p = q + r;
+        a = a + b;
+    }
+    exit = ex + it;
+}
+

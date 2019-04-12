@@ -1,0 +1,17 @@
+{
+    a = b + c;
+    if (x == y)
+    {
+        p = q - r;
+    }
+    else if (x > y)
+    {
+        q = r - p;
+    }
+    else
+    {
+        r = p - q;
+    }
+    exit = ex + it;
+}
+

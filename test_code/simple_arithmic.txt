@@ -1,0 +1,7 @@
+{
+    a = b + c;
+    lty = chy - haha;
+    hello = world && baka;
+    r = p + q * r - s;
+}
+
