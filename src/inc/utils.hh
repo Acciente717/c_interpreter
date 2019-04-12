@@ -11,6 +11,8 @@
 namespace cint
 {
 
+struct cmdSeq;
+
 /**
  *  Generate a random string with length `len`.
  *  If `sharpHead` is set to `true`, the first character will be '#',
@@ -30,6 +32,12 @@ inline bool isTempNameExist(const std::string &name,
         return false;
     return true;
 }
+
+/**
+ *  Recursively print the commands stored in the `seq`.
+ *  `indent` controls how many white spaces appear before the commands.
+ */
+void printCmdSeq(const cmdSeq &seq, int indent = 0);
 
 }  // namespace cint
 

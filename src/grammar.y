@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_set>
 #include <memory>
+#include <stack>
 
 #include "intermediateCommand.hh"
 #include "yaccInfoStructure.hh"
@@ -15,7 +16,7 @@
 using namespace cint;\
 std::string tmpVar;\
 while (isTempNameExist(tmpVar = genRandomStr(TEMP_NAME_LEN, true), *gpExistTmpVar));\
-gpCmdSeq->cmds.emplace_back(cmdType::ternaryOperation,\
+cmdSeqStk.top()->cmds.emplace_back(cmdType::ternaryOperation,\
                             std::unique_ptr<ternaryOperation>\
                             (new ternaryOperation\
                             {\
@@ -27,7 +28,7 @@ gpCmdSeq->cmds.emplace_back(cmdType::ternaryOperation,\
 $$ = cint::yaccInfo(yaccInfo::infoType::varName,\
                     std::move(tmpVar))
 
-cint::cmdSeq *gpCmdSeq;
+std::stack<cint::cmdSeq *> cmdSeqStk;
 std::unordered_set<std::string> *gpExistTmpVar;
 
 std::string gLexIdentifier;
@@ -50,7 +51,7 @@ extern "C"
 %token CINT_TYPE_INT CINT_TYPE_DOUBLE CINT_TYPE_VOID
 
  /* Reserved Control Keywords */
-%token CINT_CTRL_IF CINT_CTRL_WHILE CINT_CTRL_BREAK 
+%token CINT_CTRL_IF CINT_CTRL_ELSE CINT_CTRL_WHILE CINT_CTRL_BREAK 
 %token CINT_CTRL_CONTINUE CINT_CTRL_RETURN
 
  /* Operators */
@@ -84,8 +85,8 @@ start                       : /* empty */
  /* A Block of statements. { ... } */
 ND_BLOCK_STATEMENTS         : CINT_DELIM_LBRACE
                                 {
-                                    gpCmdSeq = new cint::cmdSeq;
-                                    gpCmdSeq->type = cint::cmdSeqType::normal;
+                                    cmdSeqStk.push(new cint::cmdSeq);
+                                    cmdSeqStk.top()->type = cint::cmdSeqType::normal;
                                     gpExistTmpVar = new std::unordered_set<std::string>;
                                 }
                               ND_STATEMENT_SEQUENCE CINT_DELIM_RBRACE
@@ -102,7 +103,124 @@ ND_STATEMENT_SEQUENCE       : /* empty */
 ND_STATEMENT                : ND_DECLARE_VARIABLE
                             | ND_ARITHMIC_OPERATION
                             | ND_CONTROL_COMMAND
+                            | ND_BLOCK_STATEMENTS
+                                {
+                                    auto subCmds = cmdSeqStk.top();
+                                    cmdSeqStk.pop();
+                                    std::unique_ptr<cint::normalBlkOperation> ptr(
+                                        new cint::normalBlkOperation{std::move(*subCmds)});
+                                    delete subCmds;
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::normalBlock,
+                                                                       std::move(ptr));
+                                }
+                            | ND_BRANCH_STATEMENTS
+                                {
+                                    auto subCmds = cmdSeqStk.top();
+                                    cmdSeqStk.pop();
+                                    std::unique_ptr<cint::branchBlkOperation> ptr(
+                                        new cint::branchBlkOperation{std::move(*subCmds)});
+                                    delete subCmds;
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::branchBlock,
+                                                                       std::move(ptr));
+                                }
+                            | ND_LOOP_STATEMENTS
+                                {
+                                    auto subCmds = cmdSeqStk.top();
+                                    cmdSeqStk.pop();
+                                    std::unique_ptr<cint::loopBlkOperation> ptr(
+                                        new cint::loopBlkOperation{std::move(*subCmds)});
+                                    delete subCmds;
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::loopBlock,
+                                                                       std::move(ptr));
+                                }
                             ;
+
+
+ /* Loop statements. */
+ND_LOOP_STATEMENTS          : CINT_CTRL_WHILE
+                                {
+                                    cmdSeqStk.push(new cint::cmdSeq);
+                                    cmdSeqStk.top()->type = cint::cmdSeqType::loop;
+                                }
+                              CINT_DELIM_LPAREN ND_EXPRESSION CINT_DELIM_RPAREN
+                                {
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::loopGuard,
+                                                                       std::unique_ptr<cint::loopGuardOperation>
+                                                                       (new cint::loopGuardOperation
+                                                                       {*reinterpret_cast<std::string *>($4.data)}));
+                                }
+                              CINT_DELIM_LBRACE ND_STATEMENT_SEQUENCE CINT_DELIM_RBRACE
+                                {
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::loopContinue,
+                                                               std::unique_ptr<cint::loopContOperation>
+                                                               (new cint::loopContOperation()));
+                                }
+                            ;
+
+
+ /* Branch statement. */
+ND_BRANCH_STATEMENTS        :   
+                                {
+                                    cmdSeqStk.push(new cint::cmdSeq);
+                                    cmdSeqStk.top()->type = cint::cmdSeqType::branch;
+                                }
+                              ND_BRANCH_IF_STATEMENT ND_BRANCH_ELIF_SEQUENCE ND_BRANCH_ELSE_STATEMENT
+                            ;
+
+ /* If statement. */
+ND_BRANCH_IF_STATEMENT      : CINT_CTRL_IF
+                              CINT_DELIM_LPAREN ND_EXPRESSION CINT_DELIM_RPAREN ND_BLOCK_STATEMENTS
+                                {
+                                    auto subCmds = cmdSeqStk.top();
+                                    cmdSeqStk.pop();
+                                    subCmds->cmds.emplace_back(cint::cmdType::branchBreak,
+                                                               std::unique_ptr<cint::branchBrkOperation>
+                                                               (new cint::branchBrkOperation()));
+                                    std::unique_ptr<cint::condBlkOperation> ptr(
+                                        new cint::condBlkOperation{*reinterpret_cast<std::string *>($3.data),
+                                                                   std::move(*subCmds)});
+                                    delete subCmds;
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::conditionalBlock,
+                                                                       std::move(ptr));
+                                }
+                            ;
+
+ /* A sequence of else-if statements. */
+ND_BRANCH_ELIF_SEQUENCE     : /* empty */
+                            | ND_BRANCH_ELIF_SEQUENCE CINT_CTRL_ELSE CINT_CTRL_IF
+                              CINT_DELIM_LPAREN ND_EXPRESSION CINT_DELIM_RPAREN ND_BLOCK_STATEMENTS
+                                {
+                                    auto subCmds = cmdSeqStk.top();
+                                    cmdSeqStk.pop();
+                                    subCmds->cmds.emplace_back(cint::cmdType::branchBreak,
+                                                               std::unique_ptr<cint::branchBrkOperation>
+                                                               (new cint::branchBrkOperation()));
+                                    std::unique_ptr<cint::condBlkOperation> ptr(
+                                        new cint::condBlkOperation{*reinterpret_cast<std::string *>($5.data),
+                                                                   std::move(*subCmds)});
+                                    delete subCmds;
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::conditionalBlock,
+                                                                       std::move(ptr));
+                                }
+                            ;
+
+ /* Else statement. */
+ND_BRANCH_ELSE_STATEMENT    : /* empty */
+                            | CINT_CTRL_ELSE ND_BLOCK_STATEMENTS
+                                {
+                                    auto subCmds = cmdSeqStk.top();
+                                    cmdSeqStk.pop();
+                                    subCmds->cmds.emplace_back(cint::cmdType::branchBreak,
+                                                               std::unique_ptr<cint::branchBrkOperation>
+                                                               (new cint::branchBrkOperation()));
+                                    std::unique_ptr<cint::normalBlkOperation> ptr(
+                                        new cint::normalBlkOperation{std::move(*subCmds)});
+                                    delete subCmds;
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::normalBlock,
+                                                                       std::move(ptr));
+                                }
+                            ;
+
 
  /* Declare a variable. */
 ND_DECLARE_VARIABLE         : ND_TYPE_NAME ND_IDENTIFIER CINT_DELIM_SEMICOLON
@@ -117,16 +235,22 @@ ND_TYPE_NAME                : CINT_TYPE_INT CINT_DELIM_SEMICOLON
 
 
  /* All control commands. */
-ND_CONTROL_COMMAND          : CINT_CTRL_BREAK 
-                            | CINT_CTRL_CONTINUE
-                            | CINT_CTRL_RETURN
+ND_CONTROL_COMMAND          : CINT_CTRL_BREAK CINT_DELIM_SEMICOLON
+                                {
+                                    using namespace cint;
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::loopBreak,
+                                                                       std::unique_ptr<loopBrkOperation>
+                                                                       (new loopBrkOperation()));
+                                }
+                            | CINT_CTRL_CONTINUE CINT_DELIM_SEMICOLON
+                            | CINT_CTRL_RETURN CINT_DELIM_SEMICOLON
                             ;
 
  /* Do arithmic operation. */
 ND_ARITHMIC_OPERATION       : ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_DELIM_SEMICOLON
                                 {
                                     using namespace cint;
-                                    gpCmdSeq->cmds.emplace_back(cmdType::binaryOperation,
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::binaryOperation,
                                                                 std::unique_ptr<binaryOperation>
                                                                 (new binaryOperation
                                                                 {
@@ -293,82 +417,6 @@ ND_IDENTIFIER               : CINT_IDENTIFIER
 
 int yywrap()
 {
-    using namespace cint;
-    using namespace std;
-    for (auto &i : gpCmdSeq->cmds)
-    {
-        switch (i.type)
-        {
-        case cmdType::binaryOperation:
-            cout << "binaryOperation: ";
-            switch (reinterpret_cast<binaryOperation *>(i.opr)->oprType)
-            {
-                case binaryOprType::assign:
-                    cout << "assign: ";
-                    break;
-                default:
-                    cout << "unknown: ";
-                    break;
-            }
-            cout << reinterpret_cast<binaryOperation *>(i.opr)->vars[0] << " | "
-                 << reinterpret_cast<binaryOperation *>(i.opr)->vars[1] << endl;
-            break;
-        
-        case cmdType::ternaryOperation:
-            cout << "ternaryOperation: ";
-            switch (reinterpret_cast<ternaryOperation *>(i.opr)->oprType)
-            {
-            case ternaryOprType::assignSum:
-                cout << "assignSum: ";
-                break;
-            case ternaryOprType::assignDifference:
-                cout << "assignDifference: ";
-                break;
-            case ternaryOprType::assignProduct:
-                cout << "assignProduct: ";
-                break;
-            case ternaryOprType::assignQuotient:
-                cout << "assignQuotient: ";
-                break;
-            case ternaryOprType::assignResidue:
-                cout << "assignResidue: ";
-                break;
-            case ternaryOprType::assignLess:
-                cout << "assignLess: ";
-                break;
-            case ternaryOprType::assignLessEqual:
-                cout << "assignLessEqual: ";
-                break;
-            case ternaryOprType::assignGreater:
-                cout << "assignGreater: ";
-                break;
-            case ternaryOprType::assignGreaterEqual:
-                cout << "assignGreaterEqual: ";
-                break;
-            case ternaryOprType::assignEqual:
-                cout << "assignEqual: ";
-                break;
-            case ternaryOprType::assignNotEqual:
-                cout << "assignNotEqual: ";
-                break;
-            case ternaryOprType::assignLogicAnd:
-                cout << "assignLogicAnd: ";
-                break;
-            case ternaryOprType::assignLogicOr:
-                cout << "assignLogicOr: ";
-                break;
-            default:
-                cout << "unknown: ";
-                break;
-            }
-            cout << reinterpret_cast<ternaryOperation *>(i.opr)->vars[0] << " | "
-                 << reinterpret_cast<ternaryOperation *>(i.opr)->vars[1] << " | "
-                 << reinterpret_cast<ternaryOperation *>(i.opr)->vars[2] << endl;
-            break;
-        
-        default:
-            cout << "unknown: " << endl;
-        }
-    }
+    printCmdSeq(*cmdSeqStk.top());
     return 1;
 }

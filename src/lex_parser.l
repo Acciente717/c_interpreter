@@ -8,6 +8,7 @@ void     { return CINT_TYPE_VOID; }
 
  /* Reserved Control Keywords */
 if       { return CINT_CTRL_IF; }
+else     { return CINT_CTRL_ELSE; }
 while    { return CINT_CTRL_WHILE; }
 break    { return CINT_CTRL_BREAK; }
 continue { return CINT_CTRL_CONTINUE; }

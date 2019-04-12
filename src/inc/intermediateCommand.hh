@@ -65,6 +65,8 @@ enum class cmdType
     functionReturn,
     loopContinue,
     loopBreak,
+    loopGuard,
+    loopBlock,
     branchBreak,
     branchBlock,
     normalBlock,
@@ -103,6 +105,8 @@ enum class binaryOprType
  *  assignGreaterEqual - x = y >= z
  *  assignEqual        - x = y == z
  *  assignNotEqual     - x = y != z
+ *  assignLogicAnd     - x = y && z
+ *  assignLogicOr      - x = y || z
  */
 enum class ternaryOprType
 {
@@ -204,6 +208,22 @@ struct loopBrkOperation
 };
 
 /**
+ *  Check if the condition of loop is met. If not, exit the loop.
+ */
+struct loopGuardOperation
+{
+    varName testVar;
+};
+
+/**
+ *  A sequence of commands inside a loop.
+ */
+struct loopBlkOperation
+{
+    cmdSeq cmdseq;
+};
+
+/**
  *  Enter a sequence of if-elif-elif-...-else test.
  */
 struct branchBlkOperation
@@ -267,6 +287,10 @@ struct command
                             std::unique_ptr<loopContOperation> opr);
     inline explicit command(cmdType type,
                             std::unique_ptr<loopBrkOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<loopGuardOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<loopBlkOperation> opr);
     inline explicit command(cmdType type,
                             std::unique_ptr<branchBlkOperation> opr);
     inline explicit command(cmdType type,
@@ -379,6 +403,32 @@ command::command(cmdType _type, std::unique_ptr<loopBrkOperation> _opr)
     iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating loop break operation!");
+
+    type = _type;
+    opr = _opr.release();
+}
+
+command::command(cmdType _type, std::unique_ptr<loopGuardOperation> _opr)
+{
+    iferr (_type != cmdType::loopGuard)
+        throw cmdCreationError("Error: argument mismatch"
+                               " while creating loop guard operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument"
+                               " while creating loop guard operation!");
+
+    type = _type;
+    opr = _opr.release();
+}
+
+command::command(cmdType _type, std::unique_ptr<loopBlkOperation> _opr)
+{
+    iferr (_type != cmdType::loopBlock)
+        throw cmdCreationError("Error: argument mismatch"
+                               " while creating loop block operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument"
+                               " while creating loop block operation!");
 
     type = _type;
     opr = _opr.release();
