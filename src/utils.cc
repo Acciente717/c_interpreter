@@ -171,6 +171,30 @@ void printCmdSeq(const cmdSeq &seq, int indent)
             break;
         // end of `loopBreak`
 
+        case cmdType::readArrayOperation:
+            cout << "readArray: "
+                 << reinterpret_cast<readArrayOperation *>(i.opr)->tgtName
+                 << " | "
+                 << reinterpret_cast<readArrayOperation *>(i.opr)->arName;
+            for (const auto &j :
+                 reinterpret_cast<readArrayOperation *>(i.opr)->idxs)
+                cout << '[' << j << ']';
+            cout << endl;
+            break;
+        // end of `readArrayOperation`
+
+        case cmdType::writeArrayOperation:
+            cout << "writeArray: "
+                 << reinterpret_cast<writeArrayOperation *>(i.opr)->arName;
+            for (const auto &j :
+                 reinterpret_cast<writeArrayOperation *>(i.opr)->idxs)
+                cout << '[' << j << ']';
+            cout << " | "
+                 << reinterpret_cast<writeArrayOperation *>(i.opr)->srcName
+                 << endl;
+            break;
+        // end of `writeArrayOperation`
+
         default:
             cout << "unknown: " << endl;
         }

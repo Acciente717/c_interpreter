@@ -61,6 +61,8 @@ enum class cmdType
     unaryOperation,
     binaryOperation,
     ternaryOperation,
+    readArrayOperation,
+    writeArrayOperation,
     functionCall,
     functionReturn,
     loopContinue,
@@ -165,6 +167,36 @@ struct ternaryOperation
 {
     ternaryOprType oprType;
     varName vars[3];
+};
+
+/**
+ *  Read an element from a multi-dimensional array.
+ * 
+ *  Operation: e = ar[x][y][ ... ][z]
+ *  tgtName  - e
+ *  arName   - ar
+ *  idxs     - x, y, ..., z
+ */
+struct readArrayOperation
+{
+    varName tgtName;
+    varName arName;
+    std::vector<varName> idxs;
+};
+
+/**
+ *  Write an element to a multi-dimensional array.
+ * 
+ *  Operation: ar[x][y][ ... ][z] = s
+ *  arName   - ar
+ *  idxs     - x, y, ..., z
+ *  srcName  - s
+ */
+struct writeArrayOperation
+{
+    varName arName;
+    std::vector<varName> idxs;
+    varName srcName;
 };
 
 /**
@@ -280,6 +312,10 @@ struct command
     inline explicit command(cmdType type,
                             std::unique_ptr<ternaryOperation> opr);
     inline explicit command(cmdType type,
+                            std::unique_ptr<readArrayOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<writeArrayOperation> opr);
+    inline explicit command(cmdType type,
                             std::unique_ptr<funcCallOperation> opr);
     inline explicit command(cmdType type,
                             std::unique_ptr<funcRetOperation> opr);
@@ -345,12 +381,35 @@ command::command(cmdType _type, std::unique_ptr<ternaryOperation> _opr)
     iferr (_type != cmdType::ternaryOperation)
         throw cmdCreationError("Error: argument mismatch"
                                " while creating ternary operation!");
-    iferr (!static_cast<bool>(_opr)) {
-        std::cerr << _opr.get() << std::endl;
-        std::cerr.flush();
+    iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating ternary operation!");
-    }
+
+    type = _type;
+    opr = _opr.release();
+}
+
+command::command(cmdType _type, std::unique_ptr<readArrayOperation> _opr)
+{
+    iferr (_type != cmdType::readArrayOperation)
+        throw cmdCreationError("Error: argument mismatch"
+                               " while creating read array operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument"
+                               " while creating read array operation!");
+
+    type = _type;
+    opr = _opr.release();
+}
+
+command::command(cmdType _type, std::unique_ptr<writeArrayOperation> _opr)
+{
+    iferr (_type != cmdType::writeArrayOperation)
+        throw cmdCreationError("Error: argument mismatch"
+                               " while creating write array operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument"
+                               " while creating write array operation!");
 
     type = _type;
     opr = _opr.release();

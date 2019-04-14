@@ -33,6 +33,7 @@ std::unordered_set<std::string> *gpExistTmpVar;
 
 std::string gLexIdentifier;
 std::string gLexInteger;
+std::vector<std::string> gSubscripts;
 
 extern "C"
 {
@@ -259,6 +260,20 @@ ND_ARITHMIC_OPERATION       : ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_D
                                                                     *reinterpret_cast<std::string *>($3.data)
                                                                 }));
                                 }
+                            | ND_ARRAY_ELEMENT CINT_OPR_ASSIGN ND_EXPRESSION CINT_DELIM_SEMICOLON
+                                {
+                                    using namespace cint;
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::writeArrayOperation,
+                                    std::unique_ptr<writeArrayOperation>(
+                                        new writeArrayOperation{
+                                            std::move(*reinterpret_cast<std::string *>
+                                                        ($1.data)),
+                                            gSubscripts,
+                                            std::move(*reinterpret_cast<std::string *>
+                                                        ($3.data)),
+                                        }
+                                    ));
+                                }
                             ;
 
 
@@ -401,7 +416,39 @@ ND_EXPRESSION_1             : ND_IDENTIFIER
                                 {
                                     $$ = $2;
                                 }
+                            | ND_ARRAY_ELEMENT
+                                {
+                                    using namespace cint;
+                                    std::string tmpVar;
+                                    while (isTempNameExist(tmpVar = genRandomStr(TEMP_NAME_LEN, true), *gpExistTmpVar));
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::readArrayOperation,
+                                                                       std::unique_ptr<readArrayOperation>(
+                                                                           new readArrayOperation{
+                                                                                tmpVar,
+                                                                                std::move(*reinterpret_cast<std::string *>
+                                                                                         ($1.data)),
+                                                                                gSubscripts
+                                                                           }
+                                                                       ));
+                                    $$ = yaccInfo(yaccInfo::infoType::varName,
+                                                  std::move(tmpVar));
+                                }
                             ;
+
+
+ND_ARRAY_ELEMENT            : ND_IDENTIFIER CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
+                                {
+                                    gSubscripts.clear();
+                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
+                                    $$ = $1;
+                                }
+                            | ND_ARRAY_ELEMENT CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
+                                {
+                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
+                                    $$ = $1;
+                                }
+                            ;
+
 
 ND_IDENTIFIER               : CINT_IDENTIFIER
                                 {

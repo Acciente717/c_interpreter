@@ -20,6 +20,12 @@ void command::releaseMemory()
     case cmdType::ternaryOperation:
         delete reinterpret_cast<ternaryOprType *>(opr);
         break;
+    case cmdType::readArrayOperation:
+        delete reinterpret_cast<readArrayOperation *>(opr);
+        break;
+    case cmdType::writeArrayOperation:
+        delete reinterpret_cast<writeArrayOperation *>(opr);
+        break;
     case cmdType::functionCall:
         delete reinterpret_cast<funcCallOperation *>(opr);
         break;
@@ -32,6 +38,12 @@ void command::releaseMemory()
     case cmdType::loopBreak:
         delete reinterpret_cast<loopBrkOperation *>(opr);
         break;
+    case cmdType::loopGuard:
+        delete reinterpret_cast<loopGuardOperation *>(opr);
+        break;
+    case cmdType::loopBlock:
+        delete reinterpret_cast<loopBlkOperation *>(opr);
+        break;
     case cmdType::branchBlock:
         delete reinterpret_cast<branchBlkOperation *>(opr);
         break;
@@ -43,6 +55,9 @@ void command::releaseMemory()
         break;
     case cmdType::conditionalBlock:
         delete reinterpret_cast<condBlkOperation *>(opr);
+        break;
+    case cmdType::declareVariable:
+        delete reinterpret_cast<declVarOperation *>(opr);
         break;
     case cmdType::empty:
         opr = nullptr;

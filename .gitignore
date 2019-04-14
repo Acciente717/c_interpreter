@@ -1,0 +1,5 @@
+.vscode/ipch/*
+src/*.o
+src/lex_parser.cc
+src/grammar.cc
+cint
