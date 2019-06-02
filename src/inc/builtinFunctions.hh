@@ -6,6 +6,9 @@
 #include <string>
 #include <type_traits>
 
+namespace cint
+{
+
 template <typename T>
 inline void cputint(T val)
 {
@@ -20,6 +23,8 @@ inline void cputchar(T val)
     static_assert(std::is_integral<T>::value, "cputchar must be called "
                                               "with an integral argument!");
     std::cout << static_cast<char>(val);
+}
+
 }
 
 #endif

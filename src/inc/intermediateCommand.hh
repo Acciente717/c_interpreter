@@ -17,9 +17,9 @@ namespace cint
  *                    Alias and Declarations                       *
  ******************************************************************/
 
-using varName = std::string;
-using funcName = std::string;
-using typeName = std::string;
+using VarName = std::string;
+using FuncName = std::string;
+using TypeName = std::string;
 
 struct command;
 
@@ -93,6 +93,9 @@ enum class binaryOprType
 };
 
 /**
+ *  WARNING: Execution Manager use this sequence to perform
+ *  type conversion decision. Modify it with caution!
+ * 
  *  Types of all possible ternary operations.
  * 
  *  Operation: f(x, y, z)
@@ -137,7 +140,7 @@ enum class ternaryOprType
 struct unaryOperation
 {
     unaryOprType oprType;
-    varName vars[1];
+    VarName vars[1];
 };
 
 /**
@@ -151,7 +154,7 @@ struct unaryOperation
 struct binaryOperation
 {
     binaryOprType oprType;
-    varName vars[2];
+    VarName vars[2];
 };
 
 /**
@@ -166,7 +169,7 @@ struct binaryOperation
 struct ternaryOperation
 {
     ternaryOprType oprType;
-    varName vars[3];
+    VarName vars[3];
 };
 
 /**
@@ -179,9 +182,9 @@ struct ternaryOperation
  */
 struct readArrayOperation
 {
-    varName tgtName;
-    varName arName;
-    std::vector<varName> idxs;
+    VarName tgtName;
+    VarName arName;
+    std::vector<VarName> idxs;
 };
 
 /**
@@ -194,9 +197,9 @@ struct readArrayOperation
  */
 struct writeArrayOperation
 {
-    varName arName;
-    std::vector<varName> idxs;
-    varName srcName;
+    VarName arName;
+    std::vector<VarName> idxs;
+    VarName srcName;
 };
 
 /**
@@ -208,8 +211,8 @@ struct writeArrayOperation
  */
 struct funcCallOperation
 {
-    funcName func;
-    std::vector<varName> varVec;
+    FuncName func;
+    std::vector<VarName> varVec;
 };
 
 /**
@@ -220,7 +223,7 @@ struct funcCallOperation
  */
 struct funcRetOperation
 {
-    varName vars[1];
+    VarName vars[1];
 };
 
 /**
@@ -244,7 +247,7 @@ struct loopBrkOperation
  */
 struct loopGuardOperation
 {
-    varName testVar;
+    VarName testVar;
 };
 
 /**
@@ -287,7 +290,7 @@ struct normalBlkOperation
  */
 struct condBlkOperation
 {
-    varName testVar;
+    VarName testVar;
     cmdSeq cmdseq;
 };
 
@@ -296,8 +299,8 @@ struct condBlkOperation
  */
 struct declVarOperation
 {
-    typeName type;
-    varName var;
+    TypeName type;
+    VarName var;
 };
 
 struct command
