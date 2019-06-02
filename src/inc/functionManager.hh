@@ -11,6 +11,19 @@
 namespace cint
 {
 
+enum builtinFuncEnum
+{
+    CPUTINT,
+    CPUTCHAR,
+    BUILTIN_FUNC_NUM
+};
+
+struct builtinFuncInfo
+{
+    builtinFuncEnum builtinNum;
+    std::vector<int> paramTypeNums;
+};
+
 struct functionInfo
 {
     std::vector<int> paramTypeNums;
@@ -20,16 +33,28 @@ struct functionInfo
 
 class functionManager
 {
-    std::unordered_map<std::string, functionInfo> funcs;
+    std::unordered_map<std::string, functionInfo> funcs;  // user defined
+    std::unordered_map<std::string, builtinFuncInfo> builtins;  // builtin
+
+    void initBuiltinFunctions();
  public:
+    inline functionManager();
+
     void defineFunction(const std::string &name,
                         const std::vector<int> &paramTypeNums,
                         const std::vector<std::string> &paramNames,
                         const cmdSeq &cmds);
     const functionInfo * getFunction(const std::string &name);
+    const builtinFuncInfo * getBuiltinInfo(const std::string &funcName);
+    void invokeBuiltin(const std::string &funcName, const void **pparams);
 };
 
 functionManager &getFuncMgr();
+
+inline functionManager::functionManager()
+{
+    initBuiltinFunctions();
+}
 
 }  // namespace cint
 

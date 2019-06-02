@@ -340,6 +340,40 @@ void executionManager::exeWriteArrOpr(const writeArrayOperation *pOpr)
 
 void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
 {
+    // check if the function is a builtin one
+    auto pBuiltin = getFuncMgr().getBuiltinInfo(pOpr->func);
+    if (pBuiltin)
+    {
+        if (unlikely(pOpr->varVec.size() != pBuiltin->paramTypeNums.size()))
+            throw funcArgumentError(pOpr->func);
+
+        // prepare arguments
+        std::vector<std::unique_ptr<uint8_t[]> > tmpVars;
+        std::unique_ptr<void *[]> pargs(new void*[pOpr->varVec.size()]);
+        for (int i = 0; i < pOpr->varVec.size(); ++i)
+        {
+            auto varType = getVarMgr().getVariableTypeNum(pOpr->varVec[i]);
+            auto paramType = pBuiltin->paramTypeNums[i];
+            if (varType == paramType)
+            {
+                pargs[i] = getVarMgr().getVariableData(pOpr->varVec[i]);
+            }
+            else
+            {
+                tmpVars.emplace_back(createConvertedVariable(
+                    paramType, varType,
+                    getVarMgr().getVariableData(pOpr->varVec[i])
+                ));
+                pargs[i] = tmpVars.back().get();
+            }
+        }
+
+        // invoke builtin function
+        getFuncMgr().invokeBuiltin(pOpr->func, pargs.get());
+
+        return;
+    }
+
     // push new cmds
     auto pFunc = getFuncMgr().getFunction(pOpr->func);
     nestedCmds.push_back(&pFunc->cmds);
