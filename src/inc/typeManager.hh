@@ -2,6 +2,7 @@
 #ifndef SRC_INC_TYPE_MANAGER_HH_
 #define SRC_INC_TYPE_MANAGER_HH_
 
+#include <iostream>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -17,24 +18,14 @@ namespace cint
 enum basicTypesEnum
 {
     CINT32,
-    CFLOAT
+    CFLOAT,
+    CVOID,
+    basicTypesNum
 };
 
-const char *basicTypesName[] = {
-    "int",
-    "float"
-};
+extern const char *basicTypesName[];
 
-const int basicTypesSize[] = {
-    4,  // int
-    4   // float
-};
-
-static_assert(
-    sizeof(basicTypesSize) / sizeof(int)
-    == sizeof(basicTypesName) / sizeof(*basicTypesName),
-    "inconsistent basic type number");
-constexpr int basicTypesNum = sizeof(basicTypesSize) / sizeof(int);
+extern const int basicTypesSize[];
 
 struct fieldInfo
 {
@@ -48,7 +39,9 @@ class typeInfo
 {
     int typeNum;                      // number of the type
     unsigned typeSize;                // size of the type
+    unsigned ptrLevel;                // level of pointer
     bool basic;                       // whether the size is one of the basics
+    std::vector<unsigned> arrSize;    // multi-dimensional array size
     std::string typeName;             // name of the type
     std::unordered_map<std::string, fieldInfo>
         fields;                       // fields contained in the type
@@ -61,10 +54,11 @@ class typeInfo
                              decltype(typeSize) _size,
                              decltype(typeName) &&_typeName,
                              decltype(fields) &&_fields) noexcept;
-    inline bool isBasic() noexcept;
-    inline std::string getName() noexcept;
-    inline unsigned getSize() noexcept;
-    fieldInfo getFieldByName(const std::string &queryName);
+    inline bool isBasic() const noexcept;
+    inline std::string getName() const noexcept;
+    inline unsigned getSize() const noexcept;
+    inline bool operator==(const typeInfo &rhs) const noexcept;
+    fieldInfo getFieldByName(const std::string &queryName) const;
 };
 
 class typeManager
@@ -74,6 +68,7 @@ class typeManager
 
     inline void initBuiltinTypes();
  public:
+    inline typeManager();
     static int chooseSuperType(int lhs, int rhs)
     {
         return lhs > rhs ? lhs : rhs;
@@ -98,6 +93,7 @@ typeInfo::typeInfo(decltype(typeNum) _typeNum,
       fields(_fields)
 {
     basic = _typeNum < basicTypesNum;
+    ptrLevel = 0;  // todo
 }
 
 typeInfo::typeInfo(decltype(typeNum) _typeNum,
@@ -108,21 +104,39 @@ typeInfo::typeInfo(decltype(typeNum) _typeNum,
       fields(_fields)
 {
     basic = _typeNum < basicTypesNum;
+    ptrLevel = 0;  // todo
 }
 
-inline std::string typeInfo::getName() noexcept
+
+inline bool typeInfo::operator==(const typeInfo &rhs) const noexcept
+{
+    if (typeNum != rhs.typeNum)
+        return false;
+    if (ptrLevel != rhs.ptrLevel)
+        return false;
+    if (arrSize != rhs.arrSize)
+        return false;
+    return true;
+}
+
+inline std::string typeInfo::getName() const noexcept
 {
     return typeName;
 }
 
-inline unsigned typeInfo::getSize() noexcept
+inline unsigned typeInfo::getSize() const noexcept
 {
     return typeSize;
 }
 
-inline bool typeInfo::isBasic() noexcept
+inline bool typeInfo::isBasic() const noexcept
 {
     return basic;
+}
+
+inline typeManager::typeManager()
+{
+    initBuiltinTypes();
 }
 
 inline void typeManager::initBuiltinTypes()
@@ -134,8 +148,6 @@ inline void typeManager::initBuiltinTypes()
                             std::unordered_map<std::string, fieldInfo>()));
         name2num.emplace(basicTypesName[i], i);
     }
-    assert(types.size() == basicTypesNum);
-    assert(name2num.size() == basicTypesNum);
 }
 
 }  // namespace cint

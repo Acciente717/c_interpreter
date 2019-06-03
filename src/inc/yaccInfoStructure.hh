@@ -25,6 +25,7 @@ struct yaccInfo
         empty,
         typeName,
         varName,
+        literal,
         operatorType
     };
 
@@ -70,20 +71,24 @@ yaccInfo::yaccInfo(infoType _type, infoOprType _oprType)
 
 yaccInfo::yaccInfo(infoType _type, const std::string &name)
 {
-    if (_type != infoType::varName && _type != infoType::typeName)
+    if (_type != infoType::varName && _type != infoType::typeName
+        && _type != infoType::literal)
         throw yaccInfoCreationError("Error: argument mismatch"
                                     " while creating yaccInfo of"
-                                    " varName or typeName!");
+                                    " varName or typeName or"
+                                    " literal!");
     type = _type;
     data = new std::string(name);
 }
 
 yaccInfo::yaccInfo(infoType _type, std::string &&name)
 {
-    if (_type != infoType::varName && _type != infoType::typeName)
+    if (_type != infoType::varName && _type != infoType::typeName
+        && _type != infoType::literal)
         throw yaccInfoCreationError("Error: argument mismatch"
                                     " while creating yaccInfo of"
-                                    " varName or typeName!");
+                                    " varName or typeName or"
+                                    " literal!");
     type = _type;
     data = new std::string(std::move(name));
 }

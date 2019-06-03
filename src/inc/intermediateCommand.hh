@@ -89,7 +89,8 @@ enum class unaryOprType
  */
 enum class binaryOprType
 {
-    assign
+    assignVariable,
+    assignLiteral
 };
 
 /**

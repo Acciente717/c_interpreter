@@ -28,8 +28,12 @@ class VariableManager
 {
     std::vector<variableDictionary> varStack;
 
-    inline VariableInfo *searchVariable(
-        std::string varName
+    inline VariableInfo *searchVariableCurrentScope(
+        const std::string &varName
+    );
+
+    VariableInfo *searchVariableRecursive(
+        const std::string &varName
     );
  public:
     inline VariableManager();
@@ -58,8 +62,8 @@ inline VariableManager::VariableManager()
     varStack.emplace_back();
 }
 
-inline VariableInfo* VariableManager::searchVariable(
-    std::string varName)
+inline VariableInfo* VariableManager::searchVariableCurrentScope(
+    const std::string &varName)
 {
     auto iter = varStack.back().find(varName);
     if (iter == varStack.back().end())

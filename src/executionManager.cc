@@ -1,7 +1,7 @@
 /* Copyright @2019 Zhiyao Ma */
-#include "inc/utils.hh"
-#include "inc/executionManager.hh"
-#include "inc/functionManager.hh"
+#include "utils.hh"
+#include "executionManager.hh"
+#include "functionManager.hh"
 
 namespace cint
 {
@@ -93,6 +93,7 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
     default:
         throw unknownSwitchCase("createConvertedVariable");
     }
+    return new_data;
 }
 
 inline void int32Arithmic(ternaryOprType oprNum, void *px,
@@ -208,14 +209,16 @@ void executionManager::exeUnaryOpr(const unaryOperation *pOpr)
 
 void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
 {
-    auto xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
-    auto yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
-    auto xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
-    auto yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
+    int xType, yType;
+    void *xPtr, *yPtr;
 
     switch (pOpr->oprType)
     {
-    case binaryOprType::assign:
+    case binaryOprType::assignVariable:
+        xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
+        yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
+        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
+        yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
         if (xType != yType)
         {
             auto temp = createConvertedVariable(xType, yType, yPtr);
@@ -226,6 +229,27 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
             memcpy(xPtr, yPtr, basicTypesSize[xType]);
         }
         break;
+    case binaryOprType::assignLiteral:
+        xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
+        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
+        switch (xType)
+        {
+        case CINT32:
+            {
+                auto value = std::stoi(pOpr->vars[1]);
+                memcpy(xPtr, &value, basicTypesSize[CINT32]);
+            }
+            break;
+        case CFLOAT:
+            {
+                auto value = std::stof(pOpr->vars[1]);
+                memcpy(xPtr, &value, basicTypesSize[CFLOAT]);
+            }
+            break;
+        default:
+            throw unknownSwitchCase("executionManager::exeBinaryOpr");
+        }
+        break;
     default:
         throw unknownSwitchCase("executionManager::exeBinaryOpr");
     }
@@ -233,10 +257,8 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
 
 void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
 {
-    auto xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
     auto yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
     auto zType = getVarMgr().getVariableTypeNum(pOpr->vars[2]);
-    auto xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
     auto yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
     auto zPtr = getVarMgr().getVariableData(pOpr->vars[2]);
     void *tgtPtr;
@@ -259,6 +281,18 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
             zPtr = zSmart.get();
         }
     }
+
+    // If x is a temporary variable, we must first declare it to the
+    // variable manager.
+    if (pOpr->vars[0][0] == '#')
+    {
+        getVarMgr().declareVariable(
+            getTypeMgr().getTypenameByNum(superType),
+            pOpr->vars[0]);
+    }
+
+    auto xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
+    auto xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
 
     // If x has different types from (y OP z), create a temporary variable
     // for x. For arithmic operations, create a temporaty variable with
@@ -369,7 +403,7 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
         }
 
         // invoke builtin function
-        getFuncMgr().invokeBuiltin(pOpr->func, pargs.get());
+        getFuncMgr().invokeBuiltin(pOpr->func, (const void **) pargs.get());
 
         return;
     }
@@ -456,15 +490,22 @@ void executionManager::exeLoopContOpr(const loopContOperation *pOpr)
             "executionManager::exeLoopContOpr: "
             "loop continue outside a loop");
 
+    if (unlikely(idx == 0))
+        throw badIntermediateCommand(
+            "executionManager::exeLoopBrkOpr: "
+            "loop is the out most block");
+
     // we are not in a loop block
     if (unlikely(nestedCmds[idx]->type == cmdSeqType::function))
         throw badIntermediateCommand(
             "executionManager::exeLoopContOpr: "
             "loop continue outside a loop");
 
-    // update variable scope
-    for (auto i = nestedCmds.size() - 1; i > idx; --i)
+    // update variable scope, we should have a brand new scope
+    // after continuing the loop
+    for (auto i = nestedCmds.size() - 1; i >= idx; --i)
         getVarMgr().popScope();
+    getVarMgr().newScope();
 
     // jump back to the loop start
     nestedCmds.resize(idx + 1);
@@ -614,6 +655,10 @@ void executionManager::execute(const command &cmd)
     case cmdType::functionReturn:
         exeFuncRetOpr(reinterpret_cast<const funcRetOperation*>(cmd.opr));
         break;
+    case cmdType::loopGuard:
+        exeLoopGuardOpr(reinterpret_cast<const loopGuardOperation *>
+            (cmd.opr));
+        break;
     case cmdType::loopContinue:
         exeLoopContOpr(reinterpret_cast<const loopContOperation*>(cmd.opr));
         break;
@@ -658,7 +703,8 @@ void executionManager::run()
 
         // execute cmds
         ++nestedCmdIdxs.back();
-        execute(nestedCmds.back()->cmds[nestedCmdIdxs.back()]);
+        // printCmd(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1], 0);
+        execute(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1]);
     }
 }
 

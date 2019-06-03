@@ -8,13 +8,11 @@
 
 #include "representations.hh"
 
-#define likely(x)       __builtin_expect((x), 1)
-#define unlikely(x)     __builtin_expect((x), 0)
-
 namespace cint
 {
 
 struct cmdSeq;
+struct command;
 
 /**
  *  Generate a random string with length `len`.
@@ -41,6 +39,12 @@ inline bool isTempNameExist(const std::string &name,
  *  `indent` controls how many white spaces appear before the commands.
  */
 void printCmdSeq(const cmdSeq &seq, int indent = 0);
+
+/**
+ *  Print a single command.
+ *  `indent` controls how many white spaces appear before the commands.
+ */
+void printCmd(const command &cmd, int indent);
 
 }  // namespace cint
 

@@ -41,12 +41,13 @@ class functionManager
     inline functionManager();
 
     void defineFunction(const std::string &name,
-                        const std::vector<int> &paramTypeNums,
-                        const std::vector<std::string> &paramNames,
-                        const cmdSeq &cmds);
+                        std::vector<int> &&paramTypeNums,
+                        std::vector<std::string> &&paramNames,
+                        cmdSeq &&cmds);
+    inline const decltype(funcs) *getAllDefinedFuncs();
     const functionInfo * getFunction(const std::string &name);
     const builtinFuncInfo * getBuiltinInfo(const std::string &funcName);
-    void invokeBuiltin(const std::string &funcName, const void **pparams);
+    void invokeBuiltin(const std::string &funcName, const void *pparams[]);
 };
 
 functionManager &getFuncMgr();
@@ -54,6 +55,13 @@ functionManager &getFuncMgr();
 inline functionManager::functionManager()
 {
     initBuiltinFunctions();
+}
+
+
+inline const decltype(functionManager::funcs)
+*functionManager::getAllDefinedFuncs()
+{
+    return &funcs;
 }
 
 }  // namespace cint

@@ -3,7 +3,7 @@
 
  /* Reserved Type Keywords */
 int      { return CINT_TYPE_INT; }
-double   { return CINT_TYPE_DOUBLE; }
+float   { return CINT_TYPE_FLOAT; }
 void     { return CINT_TYPE_VOID; }
 
  /* Reserved Control Keywords */

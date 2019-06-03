@@ -16,6 +16,7 @@ void yaccInfo::releaseMemory()
         break;
     case infoType::typeName:
     case infoType::varName:
+    case infoType::literal:
         delete reinterpret_cast<std::string *>(data);
         break;
     }
@@ -38,6 +39,7 @@ yaccInfo& yaccInfo::operator=(const yaccInfo &rhs)
         break;
     case infoType::typeName:
     case infoType::varName:
+    case infoType::literal:
         data = new std::string(*reinterpret_cast<std::string *>(rhs.data));
         break;
     }
@@ -56,6 +58,7 @@ yaccInfo& yaccInfo::operator=(yaccInfo &&rhs)
         break;
     case infoType::typeName:
     case infoType::varName:
+    case infoType::literal:
         data = new std::string(std::move(*reinterpret_cast<std::string *>
                                             (rhs.data)));
         break;

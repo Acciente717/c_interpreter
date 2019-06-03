@@ -1,10 +1,24 @@
 /* Copyright @2019 Zhiyao Ma */
 
-#include "inc/typeManager.hh"
-#include "inc/exceptions.hh"
+#include <iostream>
+
+#include "typeManager.hh"
+#include "exceptions.hh"
 
 namespace cint
 {
+
+const char *basicTypesName[] = {
+    "int",
+    "float",
+    "void"
+};
+
+const int basicTypesSize[] = {
+    4,  // int
+    4,  // float
+    1   // void
+};
 
 typeManager& getTypeMgr()
 {
@@ -12,7 +26,7 @@ typeManager& getTypeMgr()
     return typeMgr;
 }
 
-fieldInfo typeInfo::getFieldByName(const std::string &queryName)
+fieldInfo typeInfo::getFieldByName(const std::string &queryName) const
 {
     try
     {

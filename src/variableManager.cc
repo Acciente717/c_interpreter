@@ -3,8 +3,8 @@
 #include <memory>
 #include <cstring>
 
-#include "inc/variableManager.hh"
-#include "inc/exceptions.hh"
+#include "variableManager.hh"
+#include "exceptions.hh"
 
 namespace cint
 {
@@ -22,11 +22,24 @@ VariableManager::~VariableManager() noexcept
         popScope();
 }
 
+VariableInfo *VariableManager::searchVariableRecursive(
+    const std::string &varName
+)
+{
+    for (int i = varStack.size() - 1; i >= 0; --i)
+    {
+        auto iter = varStack[i].find(varName);
+        if (iter != varStack[i].end())
+            return &(iter->second);
+    }
+    return nullptr;
+}
+
 void VariableManager::declareVariable(const std::string &typeName,
                                       const std::string &varName)
 {
     // duplicate variable declaration
-    auto pVar = searchVariable(varName);
+    auto pVar = searchVariableCurrentScope(varName);
     if (pVar)
         throw duplicateVariableName(varName);
 
@@ -46,7 +59,7 @@ void VariableManager::initializeVariable(const std::string &typeName,
                                          const void *initData)
 {
     // duplicate variable declaration
-    auto pVar = searchVariable(varName);
+    auto pVar = searchVariableCurrentScope(varName);
     if (pVar)
         throw duplicateVariableName(varName);
 
@@ -64,7 +77,7 @@ void VariableManager::initializeVariable(const std::string &typeName,
 void VariableManager::assignVariable(const std::string &varName,
                                      const void *data)
 {
-    auto pVar = searchVariable(varName);
+    auto pVar = searchVariableRecursive(varName);
     if (!pVar)
         throw unknownVariableName(varName);
     memcpy(pVar->data, data, pVar->typeSize);
@@ -72,16 +85,25 @@ void VariableManager::assignVariable(const std::string &varName,
 
 void *VariableManager::getVariableData(const std::string &varName)
 {
-    auto pVar = searchVariable(varName);
+    auto pVar = searchVariableRecursive(varName);
     if (!pVar)
         throw unknownVariableName(varName);
     return pVar->data;
 }
 
+
+int VariableManager::getVariableTypeNum(const std::string &varName)
+{
+    auto pVar = searchVariableRecursive(varName);
+    if (!pVar)
+        throw unknownVariableName(varName);
+    return pVar->typeNum;
+}
+
 void VariableManager::popScope()
 {
     for (auto item : varStack.back())
-        delete[] item.second.data;
+        delete[] reinterpret_cast<uint8_t*>(item.second.data);
     varStack.pop_back();
 }
 

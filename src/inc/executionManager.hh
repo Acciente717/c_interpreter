@@ -31,11 +31,11 @@ class executionManager
     void exeDeclVarOpr(const declVarOperation *pOpr);
     void execute(const command &cmd);
  public:
-    inline explicit executionManager(cmdSeq *init_cmds);
+    inline explicit executionManager(const cmdSeq *init_cmds);
     void run();
 };
 
-inline executionManager::executionManager(cmdSeq *init_cmds)
+inline executionManager::executionManager(const cmdSeq *init_cmds)
 {
     nestedCmds.push_back(init_cmds);
     nestedCmdIdxs.push_back(0);

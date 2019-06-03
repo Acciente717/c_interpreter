@@ -4,10 +4,14 @@
 #include <unordered_set>
 #include <memory>
 #include <stack>
+#include <cassert>
 
 #include "intermediateCommand.hh"
 #include "yaccInfoStructure.hh"
 #include "utils.hh"
+#include "typeManager.hh"
+#include "functionManager.hh"
+#include "executionManager.hh"
 
 #define YYSTYPE cint::yaccInfo
 #define TEMP_NAME_LEN 8
@@ -27,6 +31,12 @@ cmdSeqStk.top()->cmds.emplace_back(cmdType::ternaryOperation,\
                             }));\
 $$ = cint::yaccInfo(yaccInfo::infoType::varName,\
                     std::move(tmpVar))
+
+cint::basicTypesEnum gActiveTypeNum;
+
+std::vector<int> gFuncParamTypes;
+std::vector<std::string> gFuncParamNames;
+std::vector<std::string> gFuncArgNames;
 
 std::stack<cint::cmdSeq *> cmdSeqStk;
 std::unordered_set<std::string> *gpExistTmpVar;
@@ -49,7 +59,7 @@ extern "C"
 %}
 
  /* Reserved Type Keywords */
-%token CINT_TYPE_INT CINT_TYPE_DOUBLE CINT_TYPE_VOID
+%token CINT_TYPE_INT CINT_TYPE_FLOAT CINT_TYPE_VOID
 
  /* Reserved Control Keywords */
 %token CINT_CTRL_IF CINT_CTRL_ELSE CINT_CTRL_WHILE CINT_CTRL_BREAK 
@@ -79,7 +89,7 @@ extern "C"
 %%
 
 start                       : /* empty */
-                            | start ND_BLOCK_STATEMENTS
+                            | start ND_FUNCTION_DEFINITION
                             ;
 
 
@@ -94,15 +104,64 @@ ND_BLOCK_STATEMENTS         : CINT_DELIM_LBRACE
                             ;
 
 
+ /* Function definition. */
+ND_FUNCTION_DEFINITION      : ND_TYPE_NAME ND_IDENTIFIER ND_PARAM_LIST ND_BLOCK_STATEMENTS
+                                {
+                                    cmdSeqStk.top()->type = cint::cmdSeqType::function;
+                                    cint::getFuncMgr().defineFunction(
+                                        *reinterpret_cast<std::string *>($2.data),
+                                        std::move(gFuncParamTypes),
+                                        std::move(gFuncParamNames),
+                                        std::move(*cmdSeqStk.top())
+                                    );
+                                    
+                                    gFuncParamNames.clear();
+                                    gFuncParamTypes.clear();
+                                    cmdSeqStk.pop();
+                                    assert(cmdSeqStk.size() == 0);
+                                }
+                            ;
+
+
  /* A sequence of statements. */
 ND_STATEMENT_SEQUENCE       : /* empty */
                             | ND_STATEMENT_SEQUENCE ND_STATEMENT
                             ;
 
+ /* Parameter list. */
+ND_PARAM_LIST               : CINT_DELIM_LPAREN CINT_DELIM_RPAREN
+                            | CINT_DELIM_LPAREN ND_NON_EMPTY_PARAM_LIST CINT_DELIM_RPAREN
+                            ;
+
+ /* Non empty parameter list. */
+ND_NON_EMPTY_PARAM_LIST     : ND_TYPE_NAME ND_IDENTIFIER
+                                {
+                                    gFuncParamTypes.emplace_back(
+                                        cint::getTypeMgr().getTypeNumByName(
+                                        *reinterpret_cast<std::string *>($1.data))
+                                    );
+                                    gFuncParamNames.emplace_back(
+                                        *reinterpret_cast<std::string *>($2.data)
+                                    );
+                                }
+                            | ND_NON_EMPTY_PARAM_LIST CINT_DELIM_COMMA ND_TYPE_NAME ND_IDENTIFIER
+                                {
+                                    gFuncParamTypes.emplace_back(
+                                        cint::getTypeMgr().getTypeNumByName(
+                                        *reinterpret_cast<std::string *>($3.data))
+                                    );
+                                    gFuncParamNames.emplace_back(
+                                        *reinterpret_cast<std::string *>($4.data)
+                                    );
+                                }
+                            ;
+
 
  /* A statement. */
 ND_STATEMENT                : ND_DECLARE_VARIABLE
+                            | ND_INITIALIZE_VARIABLE
                             | ND_ARITHMIC_OPERATION
+                            | ND_FUNCTION_INVOCATION
                             | ND_CONTROL_COMMAND
                             | ND_BLOCK_STATEMENTS
                                 {
@@ -133,6 +192,43 @@ ND_STATEMENT                : ND_DECLARE_VARIABLE
                                     delete subCmds;
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::loopBlock,
                                                                        std::move(ptr));
+                                }
+                            ;
+
+
+ /* Invoke function. */
+ND_FUNCTION_INVOCATION      : ND_IDENTIFIER CINT_DELIM_LPAREN ND_ARGUMENT_LIST CINT_DELIM_RPAREN CINT_DELIM_SEMICOLON
+                                {
+                                    cmdSeqStk.top()->cmds.emplace_back(
+                                        cint::cmdType::functionCall,
+                                        std::unique_ptr<cint::funcCallOperation>(
+                                            new cint::funcCallOperation{
+                                                *reinterpret_cast<std::string *>($1.data),
+                                                std::move(gFuncArgNames)
+                                            }
+                                        )
+                                    );
+                                    gFuncArgNames.clear();
+                                }
+                            ;
+
+ /* Argument list. */
+ND_ARGUMENT_LIST            : /* empty */
+                            | ND_NON_EMPTY_ARG_LIST
+                            ;
+
+ /* Non empty argument list. */
+ND_NON_EMPTY_ARG_LIST       : ND_EXPRESSION
+                                {
+                                    gFuncArgNames.emplace_back(
+                                        *reinterpret_cast<std::string *>($1.data)
+                                    );
+                                }
+                            | ND_NON_EMPTY_ARG_LIST CINT_DELIM_COMMA ND_EXPRESSION
+                                {
+                                    gFuncArgNames.emplace_back(
+                                        *reinterpret_cast<std::string *>($3.data)
+                                    );
                                 }
                             ;
 
@@ -225,13 +321,65 @@ ND_BRANCH_ELSE_STATEMENT    : /* empty */
 
  /* Declare a variable. */
 ND_DECLARE_VARIABLE         : ND_TYPE_NAME ND_IDENTIFIER CINT_DELIM_SEMICOLON
+                                {
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareVariable,
+                                                                        std::unique_ptr<cint::declVarOperation>
+                                                                        (new cint::declVarOperation{
+                                                                        *reinterpret_cast<std::string *>($1.data),
+                                                                        *reinterpret_cast<std::string *>
+                                                                                                ($2.data)}));
+                                }
+                            ;
+
+
+ /* Initialize a variable. */
+ND_INITIALIZE_VARIABLE      : ND_TYPE_NAME ND_IDENTIFIER CINT_OPR_ASSIGN ND_INIT_LITERAL CINT_DELIM_SEMICOLON
+                                {
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareVariable,
+                                                                        std::unique_ptr<cint::declVarOperation>
+                                                                        (new cint::declVarOperation{
+                                                                        *reinterpret_cast<std::string *>($1.data),
+                                                                        *reinterpret_cast<std::string *>
+                                                                                                ($2.data)}));
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::binaryOperation,
+                                                                        std::unique_ptr<cint::binaryOperation>
+                                                                        (new cint::binaryOperation{
+                                                                        cint::binaryOprType::assignLiteral,
+                                                                        {*reinterpret_cast<std::string *>($2.data),
+                                                                        *reinterpret_cast<std::string *>
+                                                                                                ($4.data)}}));
+                                }
+                            ;
+
+ /* Literals used upon variable initialization. */
+ND_INIT_LITERAL             : CINT_INTEGER
+                                {
+                                    using namespace cint;
+                                    $$ = yaccInfo(yaccInfo::infoType::literal,
+                                                  std::move(gLexInteger));
+                                }
                             ;
 
 
  /* All type names. */
-ND_TYPE_NAME                : CINT_TYPE_INT CINT_DELIM_SEMICOLON
-                            | CINT_TYPE_DOUBLE CINT_DELIM_SEMICOLON
-                            | CINT_TYPE_VOID CINT_DELIM_SEMICOLON
+ND_TYPE_NAME                : CINT_TYPE_INT
+                                {
+                                    using namespace cint;
+                                    $$ = yaccInfo(yaccInfo::infoType::typeName,
+                                                  "int");
+                                }
+                            | CINT_TYPE_FLOAT
+                                {
+                                    using namespace cint;
+                                    $$ = yaccInfo(yaccInfo::infoType::typeName,
+                                                  "float");
+                                }
+                            | CINT_TYPE_VOID
+                                {
+                                    using namespace cint;
+                                    $$ = yaccInfo(yaccInfo::infoType::typeName,
+                                                  "void");
+                                }
                             ;
 
 
@@ -255,7 +403,7 @@ ND_ARITHMIC_OPERATION       : ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_D
                                                                 std::unique_ptr<binaryOperation>
                                                                 (new binaryOperation
                                                                 {
-                                                                    binaryOprType::assign,
+                                                                    binaryOprType::assignVariable,
                                                                     *reinterpret_cast<std::string *>($1.data),
                                                                     *reinterpret_cast<std::string *>($3.data)
                                                                 }));
@@ -433,6 +581,32 @@ ND_EXPRESSION_1             : ND_IDENTIFIER
                                     $$ = yaccInfo(yaccInfo::infoType::varName,
                                                   std::move(tmpVar));
                                 }
+                            | ND_STANDALONE_LITERAL
+                                {
+                                    $$ = $1;
+                                }
+                            ;
+
+ /* Literals used as a constant variable but not at initialization. */
+ND_STANDALONE_LITERAL       : CINT_INTEGER
+                                {
+
+                                    std::string tmpVar;
+                                    while (cint::isTempNameExist(tmpVar = cint::genRandomStr(TEMP_NAME_LEN, true),
+                                                                *gpExistTmpVar));
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareVariable,
+                                                                        std::unique_ptr<cint::declVarOperation>
+                                                                        (new cint::declVarOperation{
+                                                                        "int", tmpVar}));
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::binaryOperation,
+                                                                        std::unique_ptr<cint::binaryOperation>
+                                                                        (new cint::binaryOperation{
+                                                                        cint::binaryOprType::assignLiteral,
+                                                                        {tmpVar, gLexInteger}}));
+                                    
+                                    $$ = cint::yaccInfo(cint::yaccInfo::infoType::varName,
+                                                  std::move(tmpVar));
+                                }
                             ;
 
 
@@ -464,6 +638,28 @@ ND_IDENTIFIER               : CINT_IDENTIFIER
 
 int yywrap()
 {
-    printCmdSeq(*cmdSeqStk.top());
+    auto pAllFuncs = cint::getFuncMgr().getAllDefinedFuncs();
+    for (const auto &i : *pAllFuncs)
+    {
+        std::cout << "function: " << i.first;
+        std::cout << '(';
+        for (int j = 0; j < i.second.paramNames.size(); ++j)
+        {
+            if (j != 0) std::cout << ", ";
+            std::cout << cint::getTypeMgr().getTypenameByNum(i.second.paramTypeNums[j]);
+            std::cout << ' ' << i.second.paramNames[j];
+        }
+        std::cout << ')' << std::endl;
+        printCmdSeq(i.second.cmds, 1);
+        std::cout << std::endl;
+    }
+
+    std::cout << std::endl
+              << "### start program execution ###" << std::endl
+              << std::endl;
+
+    cint::executionManager exeMgr(&cint::getFuncMgr().getFunction("main")->cmds);
+    exeMgr.run();
+
     return 1;
 }

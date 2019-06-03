@@ -1,8 +1,8 @@
 /* Copyright @2019 Zhiyao Ma */
 
-#include "inc/typeManager.hh"
-#include "inc/functionManager.hh"
-#include "inc/builtinFunctions.hh"
+#include "typeManager.hh"
+#include "functionManager.hh"
+#include "builtinFunctions.hh"
 
 namespace cint
 {
@@ -34,14 +34,16 @@ void functionManager::initBuiltinFunctions()
 
 void functionManager::defineFunction(
     const std::string &name,
-    const std::vector<int> &paramTypeNums,
-    const std::vector<std::string> &paramNames,
-    const cmdSeq &cmds)
+    std::vector<int> &&paramTypeNums,
+    std::vector<std::string> &&paramNames,
+    cmdSeq &&cmds)
 {
     auto iter = funcs.find(name);
     if (iter != funcs.end())
         throw redefiningFunction(name);
-    funcs[name] = {paramTypeNums, paramNames, cmds};
+    funcs[name] = {std::move(paramTypeNums),
+                   std::move(paramNames),
+                   std::move(cmds)};
 }
 
 const functionInfo * functionManager::getFunction(const std::string &name)
@@ -62,7 +64,7 @@ const builtinFuncInfo * functionManager::getBuiltinInfo(
 }
 
 void functionManager::invokeBuiltin(const std::string &funcName,
-                                    const void **pparams)
+                                    const void *pparams[])
 {
     auto iter = builtins.find(funcName);
     if (unlikely(iter == builtins.end()))
