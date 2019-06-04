@@ -55,6 +55,12 @@ void printCmd(const command &cmd, int indent)
         case binaryOprType::assignLiteral:
             cout << "assignLiteral: ";
             break;
+        case binaryOprType::assignNot:
+            cout << "assignNot: ";
+            break;
+        case binaryOprType::assignNegate:
+            cout << "assignNegate: ";
+            break;
         default:
             cout << "unknown: ";
             break;

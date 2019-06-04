@@ -25,6 +25,9 @@ void functionManager::initBuiltinFunctions()
         case CPUTCHAR:
             builtins["cputchar"] = {CPUTCHAR, {CINT32}};
             break;
+        case CPUTFLOAT:
+            builtins["cputfloat"] = {CPUTFLOAT, {CFLOAT}};
+            break;
         default:
             throw unknownFunction(
                 "unknown builtin function number: " + std::to_string(i));
@@ -77,6 +80,9 @@ void functionManager::invokeBuiltin(const std::string &funcName,
         break;
     case CPUTCHAR:
         cputchar(*reinterpret_cast<const int*>(pparams[0]));
+        break;
+    case CPUTFLOAT:
+        cputfloat(*reinterpret_cast<const float*>(pparams[0]));
         break;
     default:
         throw unknownFunction(

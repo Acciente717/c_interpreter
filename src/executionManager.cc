@@ -72,8 +72,8 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
                 = *reinterpret_cast<const int32_t*>(data);
             break;
         case CFLOAT:
-            *reinterpret_cast<float*>(new_data.get())
-                = *reinterpret_cast<const int32_t*>(data);
+            *reinterpret_cast<int32_t*>(new_data.get())
+                = *reinterpret_cast<const float*>(data);
             break;
         }
         break;
@@ -81,8 +81,8 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
         switch (srcTypeNum)
         {
         case CINT32:
-            *reinterpret_cast<int32_t*>(new_data.get())
-                = *reinterpret_cast<const float*>(data);
+            *reinterpret_cast<float*>(new_data.get())
+                = *reinterpret_cast<const int32_t*>(data);
             break;
         case CFLOAT:
             *reinterpret_cast<float*>(new_data.get())
@@ -245,6 +245,62 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
                 auto value = std::stof(pOpr->vars[1]);
                 memcpy(xPtr, &value, basicTypesSize[CFLOAT]);
             }
+            break;
+        default:
+            throw unknownSwitchCase("executionManager::exeBinaryOpr");
+        }
+        break;
+    case binaryOprType::assignNot:
+
+        // If x is a temporary variable, we must first declare it to the
+        // variable manager.
+        if (pOpr->vars[0][0] == '#')
+        {
+            getVarMgr().declareVariable(
+                getTypeMgr().getTypenameByNum(CINT32),
+                pOpr->vars[0]);
+        }
+
+        yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
+        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
+        yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
+        switch (yType)
+        {
+        case CINT32:
+            *reinterpret_cast<uint32_t *>(xPtr) =
+                !*reinterpret_cast<uint32_t *>(yPtr);
+            break;
+        case CFLOAT:
+            *reinterpret_cast<uint32_t *>(xPtr) =
+                !*reinterpret_cast<float *>(yPtr);
+            break;
+        default:
+            throw unknownSwitchCase("executionManager::exeBinaryOpr");
+        }
+        break;
+    case binaryOprType::assignNegate:
+        yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
+
+        // If x is a temporary variable, we must first declare it to the
+        // variable manager.
+        if (pOpr->vars[0][0] == '#')
+        {
+            getVarMgr().declareVariable(
+                getTypeMgr().getTypenameByNum(yType),
+                pOpr->vars[0]);
+        }
+
+        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
+        yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
+        switch (yType)
+        {
+        case CINT32:
+            *reinterpret_cast<uint32_t *>(xPtr) =
+                -*reinterpret_cast<uint32_t *>(yPtr);
+            break;
+        case CFLOAT:
+            *reinterpret_cast<float *>(xPtr) =
+                -*reinterpret_cast<float *>(yPtr);
             break;
         default:
             throw unknownSwitchCase("executionManager::exeBinaryOpr");

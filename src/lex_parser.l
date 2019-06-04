@@ -29,6 +29,7 @@ return   { return CINT_CTRL_RETURN; }
 ">="     { return CINT_OPR_GE; }
 "!="     { return CINT_OPR_NE; }
 "="      { return CINT_OPR_ASSIGN; }
+"!"      { return CINT_OPR_NOT; }
 
  /* Delimiters */
 "("      { return CINT_DELIM_LPAREN; }
@@ -50,6 +51,12 @@ return   { return CINT_CTRL_RETURN; }
 [0-9]+ {
     gLexInteger = yytext;
     return CINT_INTEGER;
+}
+
+ /* Float */
+[0-9]+\.[0-9]+ {
+    gLexFloat = yytext;
+    return CINT_FLOAT;
 }
 
  /* Blackhole for Whilespaces */

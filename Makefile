@@ -1,4 +1,5 @@
-all: cint
+all: exceptions intermediateCommand representations typeManager functionManager executionManager variableManager utils yaccInfoStructure grammar lex
+	g++ -std=c++14 -O2 -o cint src/grammar.o src/intermediateCommand.o src/utils.o src/yaccInfoStructure.o src/typeManager.o src/functionManager.o src/variableManager.o src/executionManager.o -ly -lfl
 
 exceptions:	src/inc/exceptions.hh
 
@@ -25,11 +26,12 @@ utils: src/inc/utils.hh src/utils.cc
 yaccInfoStructure: src/inc/yaccInfoStructure.hh src/yaccInfoStructure.cc
 	g++ -std=c++14 -O2 -c -I src/inc -o src/yaccInfoStructure.o src/yaccInfoStructure.cc
 
-cint: exceptions intermediateCommand representations typeManager utils yaccInfoStructure functionManager variableManager executionManager src/lex_parser.l src/grammar.y
-	flex -o src/lex_parser.cc src/lex_parser.l
+grammar: lex src/grammar.y
 	byacc -o src/grammar.cc src/grammar.y
 	g++ -std=c++14 -O2 -c -I src/inc -o src/grammar.o src/grammar.cc
-	g++ -std=c++14 -O2 -o cint src/grammar.o src/intermediateCommand.o src/utils.o src/yaccInfoStructure.o src/typeManager.o src/functionManager.o src/variableManager.o src/executionManager.o -ly -lfl
+
+lex: src/lex_parser.l
+	flex -o src/lex_parser.cc src/lex_parser.l
 
 clean:
 	rm src/*.o src/lex_parser.cc src/grammar.cc cint

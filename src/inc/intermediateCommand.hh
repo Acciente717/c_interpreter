@@ -86,11 +86,19 @@ enum class unaryOprType
 
 /**
  *  Types of all possible binary operations.
+ * 
+ *  Operation: f(x, y)
+ *  assignVariable   - x = y
+ *  assignLiteral    - x = y
+ *  assignNot        - x = !y
+ *  assignNegate     - x = -y
  */
 enum class binaryOprType
 {
     assignVariable,
-    assignLiteral
+    assignLiteral,
+    assignNot,
+    assignNegate
 };
 
 /**

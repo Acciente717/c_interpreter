@@ -1,0 +1,9 @@
+void main()
+{
+    cputint(1);
+    int val = 2;
+    cputint(val);
+    val = 3;
+    cputint(val);
+    cputchar(10);
+}

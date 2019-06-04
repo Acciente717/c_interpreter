@@ -19,5 +19,5 @@ void wrapper(int times)
 
 int main()
 {
-    wrapper(5);
+    wrapper(5 + 5);
 }

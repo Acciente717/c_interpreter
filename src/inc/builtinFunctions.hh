@@ -18,6 +18,14 @@ inline void cputint(T val)
 }
 
 template <typename T>
+inline void cputfloat(T val)
+{
+    static_assert(std::is_floating_point<T>::value, "cputfloat must be called "
+                                            "with an floating point argument!");
+    std::cout << std::to_string(val);
+}
+
+template <typename T>
 inline void cputchar(T val)
 {
     static_assert(std::is_integral<T>::value, "cputchar must be called "
@@ -25,6 +33,6 @@ inline void cputchar(T val)
     std::cout << static_cast<char>(val);
 }
 
-}
+}  // namespace cint
 
 #endif

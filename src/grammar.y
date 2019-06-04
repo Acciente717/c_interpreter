@@ -43,6 +43,7 @@ std::unordered_set<std::string> *gpExistTmpVar;
 
 std::string gLexIdentifier;
 std::string gLexInteger;
+std::string gLexFloat;
 std::vector<std::string> gSubscripts;
 
 extern "C"
@@ -70,7 +71,7 @@ extern "C"
 %token CINT_OPR_MOD CINT_OPR_LOGIC_AND CINT_OPR_LOGIC_OR
 %token CINT_OPR_LT CINT_OPR_EQ CINT_OPR_GT CINT_OPR_NE
 %token CINT_OPR_LE CINT_OPR_GE
-%token CINT_OPR_ASSIGN
+%token CINT_OPR_ASSIGN CINT_OPR_NOT
 
  /* Delimiters */
 %token CINT_DELIM_LPAREN CINT_DELIM_RPAREN
@@ -83,6 +84,9 @@ extern "C"
 
  /* Integer */
 %token CINT_INTEGER
+
+ /* Float */
+%token CINT_FLOAT
 
 %start start
 
@@ -333,7 +337,7 @@ ND_DECLARE_VARIABLE         : ND_TYPE_NAME ND_IDENTIFIER CINT_DELIM_SEMICOLON
 
 
  /* Initialize a variable. */
-ND_INITIALIZE_VARIABLE      : ND_TYPE_NAME ND_IDENTIFIER CINT_OPR_ASSIGN ND_INIT_LITERAL CINT_DELIM_SEMICOLON
+ND_INITIALIZE_VARIABLE      : ND_TYPE_NAME ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_DELIM_SEMICOLON
                                 {
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareVariable,
                                                                         std::unique_ptr<cint::declVarOperation>
@@ -344,19 +348,10 @@ ND_INITIALIZE_VARIABLE      : ND_TYPE_NAME ND_IDENTIFIER CINT_OPR_ASSIGN ND_INIT
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::binaryOperation,
                                                                         std::unique_ptr<cint::binaryOperation>
                                                                         (new cint::binaryOperation{
-                                                                        cint::binaryOprType::assignLiteral,
+                                                                        cint::binaryOprType::assignVariable,
                                                                         {*reinterpret_cast<std::string *>($2.data),
                                                                         *reinterpret_cast<std::string *>
                                                                                                 ($4.data)}}));
-                                }
-                            ;
-
- /* Literals used upon variable initialization. */
-ND_INIT_LITERAL             : CINT_INTEGER
-                                {
-                                    using namespace cint;
-                                    $$ = yaccInfo(yaccInfo::infoType::literal,
-                                                  std::move(gLexInteger));
                                 }
                             ;
 
@@ -554,6 +549,42 @@ ND_EXPRESSION_2             : ND_EXPRESSION_1
                                 {
                                     $$ = $1;
                                 }
+                            | CINT_OPR_SUB ND_EXPRESSION_2
+                                {
+                                    using namespace cint;
+                                    std::string tmpVar;
+                                    while (isTempNameExist(tmpVar = genRandomStr(TEMP_NAME_LEN, true), *gpExistTmpVar));
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::binaryOperation,
+                                                                std::unique_ptr<binaryOperation>
+                                                                (new binaryOperation
+                                                                {
+                                                                    binaryOprType::assignNegate,
+                                                                    {
+                                                                        tmpVar,
+                                                                        *reinterpret_cast<std::string *>($2.data)
+                                                                    }
+                                                                }));
+                                    $$ = cint::yaccInfo(yaccInfo::infoType::varName,
+                                                        std::move(tmpVar));
+                                }
+                            | CINT_OPR_NOT ND_EXPRESSION_2
+                                {
+                                    using namespace cint;
+                                    std::string tmpVar;
+                                    while (isTempNameExist(tmpVar = genRandomStr(TEMP_NAME_LEN, true), *gpExistTmpVar));
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::binaryOperation,
+                                                                std::unique_ptr<binaryOperation>
+                                                                (new binaryOperation
+                                                                {
+                                                                    binaryOprType::assignNot,
+                                                                    {
+                                                                        tmpVar,
+                                                                        *reinterpret_cast<std::string *>($2.data)
+                                                                    }
+                                                                }));
+                                    $$ = cint::yaccInfo(yaccInfo::infoType::varName,
+                                                        std::move(tmpVar));
+                                }
                             ;
 
 ND_EXPRESSION_1             : ND_IDENTIFIER
@@ -587,10 +618,9 @@ ND_EXPRESSION_1             : ND_IDENTIFIER
                                 }
                             ;
 
- /* Literals used as a constant variable but not at initialization. */
+ /* Literals used as a constant variable. */
 ND_STANDALONE_LITERAL       : CINT_INTEGER
                                 {
-
                                     std::string tmpVar;
                                     while (cint::isTempNameExist(tmpVar = cint::genRandomStr(TEMP_NAME_LEN, true),
                                                                 *gpExistTmpVar));
@@ -603,7 +633,23 @@ ND_STANDALONE_LITERAL       : CINT_INTEGER
                                                                         (new cint::binaryOperation{
                                                                         cint::binaryOprType::assignLiteral,
                                                                         {tmpVar, gLexInteger}}));
-                                    
+                                    $$ = cint::yaccInfo(cint::yaccInfo::infoType::varName,
+                                                  std::move(tmpVar));
+                                }
+                            | CINT_FLOAT
+                                {
+                                    std::string tmpVar;
+                                    while (cint::isTempNameExist(tmpVar = cint::genRandomStr(TEMP_NAME_LEN, true),
+                                                                *gpExistTmpVar));
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareVariable,
+                                                                        std::unique_ptr<cint::declVarOperation>
+                                                                        (new cint::declVarOperation{
+                                                                        "float", tmpVar}));
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::binaryOperation,
+                                                                        std::unique_ptr<cint::binaryOperation>
+                                                                        (new cint::binaryOperation{
+                                                                        cint::binaryOprType::assignLiteral,
+                                                                        {tmpVar, gLexFloat}}));
                                     $$ = cint::yaccInfo(cint::yaccInfo::infoType::varName,
                                                   std::move(tmpVar));
                                 }
@@ -655,8 +701,7 @@ int yywrap()
     }
 
     std::cout << std::endl
-              << "### start program execution ###" << std::endl
-              << std::endl;
+              << "### start program execution ###" << std::endl;
 
     cint::executionManager exeMgr(&cint::getFuncMgr().getFunction("main")->cmds);
     exeMgr.run();
