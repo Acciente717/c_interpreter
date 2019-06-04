@@ -25,6 +25,30 @@
 
 #### Arithmetic
 
+| Test Point Description                                      | Test Case                |
+| ----------------------------------------------------------- | ------------------------ |
+| Apply `negate` operator on `int` literal                    | `binary_basic`           |
+| Apply `negate` operator on `int` variable                   | `binary_basic`           |
+| Apply `not` operator on `int` literal                       | `binary_basic`           |
+| Apply `not` operator on `int` variable                      | `binary_basic`           |
+| Apply `negate` operator on `float` literal                  | `binary_basic`           |
+| Apply `negate` operator on `float` variable                 | `binary_basic`           |
+| Apply `not` operator on `float` literal                     | `binary_basic`           |
+| Apply `not` operator on `float` variable                    | `binary_basic`           |
+| Apply `add` operator between `int` literals and variables   | `ternary_arithmic_basic` |
+| Apply `sub` operator between `int` literals and variables   | `ternary_arithmic_basic` |
+| Apply `mul` operator between `int` literals and variables   | `ternary_arithmic_basic` |
+| Apply `div` operator between `int` literals and variables   | `ternary_arithmic_basic` |
+| Apply `mod` operator between `int` literals and variables   | `ternary_arithmic_basic` |
+| Apply `add` operator between `float` literals and variables | `ternary_arithmic_basic` |
+| Apply `sub` operator between `float` literals and variables | `ternary_arithmic_basic` |
+| Apply `mul` operator between `float` literals and variables | `ternary_arithmic_basic` |
+| Apply `div` operator between `float` literals and variables | `ternary_arithmic_basic` |
+|                                                             |                          |
+|                                                             |                          |
+
+
+
 #### Control
 
 #### Function

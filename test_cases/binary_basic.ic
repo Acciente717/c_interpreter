@@ -1,0 +1,36 @@
+void main()
+{
+    int ival;
+    ival = 2;
+    cputint(ival);
+    cputchar(10);
+    ival = -2;
+    cputint(ival);
+    cputchar(10);
+    ival = -ival;
+    cputint(ival);
+    cputchar(10);
+    ival = !ival;
+    cputint(ival);
+    cputchar(10);
+    ival = !ival;
+    cputint(ival);
+    cputchar(10);
+
+    float fval;
+    fval = 2.0;
+    cputfloat(fval);
+    cputchar(10);
+    fval = -2.0;
+    cputfloat(fval);
+    cputchar(10);
+    fval = -fval;
+    cputfloat(fval);
+    cputchar(10);
+    fval = !fval;
+    cputfloat(fval);
+    cputchar(10);
+    fval = !fval;
+    cputfloat(fval);
+    cputchar(10);
+}
