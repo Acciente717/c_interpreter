@@ -29,8 +29,11 @@ void command::releaseMemory()
     case cmdType::functionCall:
         delete reinterpret_cast<funcCallOperation *>(opr);
         break;
-    case cmdType::functionReturn:
-        delete reinterpret_cast<funcRetOperation *>(opr);
+    case cmdType::functionReturnVoid:
+        delete reinterpret_cast<funcRetVoidOperation *>(opr);
+        break;
+    case cmdType::functionReturnVal:
+        delete reinterpret_cast<funcRetValOperation *>(opr);
         break;
     case cmdType::loopContinue:
         delete reinterpret_cast<loopContOperation *>(opr);

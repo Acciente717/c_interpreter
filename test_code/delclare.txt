@@ -8,16 +8,19 @@ void sayhello()
     cputchar(d); cputchar(excl); cputchar(cr);
 }
 
-void wrapper(int times)
+int wrapper(int times)
 {
     while (times > 0)
     {
         sayhello();
         times = times - 1;
     }
+    return times;
 }
 
 int main()
 {
-    wrapper(5 + 5);
+    cputint(wrapper(5 + 5));
+    cputchar(10);
+    return 0;
 }

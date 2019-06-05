@@ -20,6 +20,35 @@ struct VariableInfo
     int typeNum;
     unsigned typeSize;
     void *data;
+
+    VariableInfo() = delete;
+    explicit VariableInfo(decltype(typeNum) _typeNum,
+                          decltype(typeSize) _typeSize,
+                          decltype(data) _data) noexcept
+    {
+        typeNum = _typeNum;
+        typeSize = _typeSize;
+        data = _data;
+    }
+    VariableInfo(const VariableInfo &other) = delete;
+    VariableInfo(VariableInfo &&other) noexcept
+    {
+        typeNum = other.typeNum;
+        typeSize = other.typeSize;
+        data = other.data;
+        other.data = nullptr;
+    }
+    VariableInfo& operator=(const VariableInfo &other) = delete;
+    VariableInfo& operator=(VariableInfo &&other) noexcept
+    {
+        delete[] reinterpret_cast<uint8_t*>(data);
+        typeNum = other.typeNum;
+        typeSize = other.typeSize;
+        data = other.data;
+        other.data = nullptr;
+        return *this;
+    }
+    ~VariableInfo() { delete[] reinterpret_cast<uint8_t*>(data); }
 };
 
 using variableDictionary = std::unordered_map<std::string, VariableInfo>;
@@ -27,6 +56,9 @@ using variableDictionary = std::unordered_map<std::string, VariableInfo>;
 class VariableManager
 {
     std::vector<variableDictionary> varStack;
+    std::vector<uint8_t> funcIndicatorStack;
+    variableDictionary globals;
+    VariableInfo returnValue;
 
     inline VariableInfo *searchVariableCurrentScope(
         const std::string &varName
@@ -39,7 +71,7 @@ class VariableManager
     inline VariableManager();
     ~VariableManager() noexcept;
 
-    inline void newScope();
+    inline void newScope(bool isFunction = false);
     void popScope();
     void declareVariable(const std::string &typeName,
                          const std::string &varName);
@@ -49,6 +81,11 @@ class VariableManager
     void assignVariable(const std::string &varName, const void *data);
     void *getVariableData(const std::string &varName);
     int getVariableTypeNum(const std::string &varName);
+    void updateReturnValue(const std::string &typeName,
+                           const void *updateData);
+    void *getReturnValueData();
+    int getReturnValueTypeNum();
+    void setReturnValueToVoid();
 };
 
 VariableManager& getVarMgr();
@@ -58,8 +95,10 @@ VariableManager& getVarMgr();
 *************************************************/
 
 inline VariableManager::VariableManager()
+    : returnValue(CVOID, 1, new uint8_t[1])
 {
     varStack.emplace_back();
+    funcIndicatorStack.push_back(0);
 }
 
 inline VariableInfo* VariableManager::searchVariableCurrentScope(
@@ -71,9 +110,10 @@ inline VariableInfo* VariableManager::searchVariableCurrentScope(
     return &(iter->second);
 }
 
-inline void VariableManager::newScope()
+inline void VariableManager::newScope(bool isFunction)
 {
     varStack.emplace_back();
+    funcIndicatorStack.push_back(static_cast<uint8_t>(isFunction));
 }
 
 }  // namespace cint

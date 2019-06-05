@@ -64,7 +64,8 @@ enum class cmdType
     readArrayOperation,
     writeArrayOperation,
     functionCall,
-    functionReturn,
+    functionReturnVoid,
+    functionReturnVal,
     loopContinue,
     loopBreak,
     loopGuard,
@@ -81,7 +82,7 @@ enum class cmdType
  */
 enum class unaryOprType
 {
-
+    getReturnValue
 };
 
 /**
@@ -225,12 +226,23 @@ struct funcCallOperation
 };
 
 /**
- *  Return from a function.
+ *  Return from a function with no return value.
  * 
  *  Operation: return x
  *  vars[0] - x
  */
-struct funcRetOperation
+struct funcRetVoidOperation
+{
+    /* Intentionally left as blank. */
+};
+
+/**
+ *  Return from a function with return value.
+ * 
+ *  Operation: return x
+ *  vars[0] - x
+ */
+struct funcRetValOperation
 {
     VarName vars[1];
 };
@@ -330,7 +342,9 @@ struct command
     inline explicit command(cmdType type,
                             std::unique_ptr<funcCallOperation> opr);
     inline explicit command(cmdType type,
-                            std::unique_ptr<funcRetOperation> opr);
+                            std::unique_ptr<funcRetVoidOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<funcRetValOperation> opr);
     inline explicit command(cmdType type,
                             std::unique_ptr<loopContOperation> opr);
     inline explicit command(cmdType type,
@@ -440,14 +454,27 @@ command::command(cmdType _type, std::unique_ptr<funcCallOperation> _opr)
     opr = _opr.release();
 }
 
-command::command(cmdType _type, std::unique_ptr<funcRetOperation> _opr)
+command::command(cmdType _type, std::unique_ptr<funcRetVoidOperation> _opr)
 {
-    iferr (_type != cmdType::functionReturn)
-        throw cmdCreationError("Error: argument mismatch"
-                               " while creating function return operation!");
+    iferr (_type != cmdType::functionReturnVoid)
+        throw cmdCreationError("Error: argument mismatch while"
+                               " creating function return void operation!");
     iferr (!static_cast<bool>(_opr))
-        throw cmdCreationError("Error: invalid pointer as argument"
-                               " while creating function return operation!");
+        throw cmdCreationError("Error: invalid pointer as argument while"
+                               " creating function return void operation!");
+
+    type = _type;
+    opr = _opr.release();
+}
+
+command::command(cmdType _type, std::unique_ptr<funcRetValOperation> _opr)
+{
+    iferr (_type != cmdType::functionReturnVal)
+        throw cmdCreationError("Error: argument mismatch while"
+                               " creating function return value operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument while"
+                               " creating function return value operation!");
 
     type = _type;
     opr = _opr.release();

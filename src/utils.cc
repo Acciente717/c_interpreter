@@ -45,6 +45,19 @@ void printCmd(const command &cmd, int indent)
 
     switch (cmd.type)
     {
+    case cmdType::unaryOperation:
+        cout << "unaryOperation: ";
+        switch (reinterpret_cast<unaryOperation *>(cmd.opr)->oprType)
+        {
+        case unaryOprType::getReturnValue:
+            cout << "getReturnValue: ";
+            break;
+        default:
+            cout << "unknown: ";
+            break;
+        }
+        cout << reinterpret_cast<unaryOperation *>(cmd.opr)->vars[0] << endl;
+        break;
     case cmdType::binaryOperation:
         cout << "binaryOperation: ";
         switch (reinterpret_cast<binaryOperation *>(cmd.opr)->oprType)
@@ -218,10 +231,17 @@ void printCmd(const command &cmd, int indent)
         break;
         // end of `funcCallOperation`
 
-    case cmdType::functionReturn:
-        cout << "functionReturn !" << endl;
+    case cmdType::functionReturnVoid:
+        cout << "functionReturnVoid !" << endl;
         break;
-        // end of `functionReturn`
+        // end of `functionReturnVoid`
+
+    case cmdType::functionReturnVal:
+        cout << "functionReturnVal: "
+             << reinterpret_cast<funcRetValOperation *>(cmd.opr)->vars[0]
+             << " !" << endl;
+        break;
+        // end of `functionReturnVal`
 
     case cmdType::declareVariable:
         cout << "declareVarable: ["

@@ -112,10 +112,16 @@ ND_BLOCK_STATEMENTS         : CINT_DELIM_LBRACE
 ND_FUNCTION_DEFINITION      : ND_TYPE_NAME ND_IDENTIFIER ND_PARAM_LIST ND_BLOCK_STATEMENTS
                                 {
                                     cmdSeqStk.top()->type = cint::cmdSeqType::function;
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::functionReturnVoid,
+                                                                       std::unique_ptr<cint::funcRetVoidOperation>
+                                                                       (new cint::funcRetVoidOperation()));
                                     cint::getFuncMgr().defineFunction(
                                         *reinterpret_cast<std::string *>($2.data),
                                         std::move(gFuncParamTypes),
                                         std::move(gFuncParamNames),
+                                        cint::getTypeMgr().getTypeNumByName(
+                                            *reinterpret_cast<std::string*>($1.data)
+                                        ),
                                         std::move(*cmdSeqStk.top())
                                     );
                                     
@@ -165,7 +171,6 @@ ND_NON_EMPTY_PARAM_LIST     : ND_TYPE_NAME ND_IDENTIFIER
 ND_STATEMENT                : ND_DECLARE_VARIABLE
                             | ND_INITIALIZE_VARIABLE
                             | ND_ARITHMIC_OPERATION
-                            | ND_FUNCTION_INVOCATION
                             | ND_CONTROL_COMMAND
                             | ND_BLOCK_STATEMENTS
                                 {
@@ -201,7 +206,7 @@ ND_STATEMENT                : ND_DECLARE_VARIABLE
 
 
  /* Invoke function. */
-ND_FUNCTION_INVOCATION      : ND_IDENTIFIER CINT_DELIM_LPAREN ND_ARGUMENT_LIST CINT_DELIM_RPAREN CINT_DELIM_SEMICOLON
+ND_FUNCTION_INVOCATION      : ND_IDENTIFIER CINT_DELIM_LPAREN ND_ARGUMENT_LIST CINT_DELIM_RPAREN
                                 {
                                     cmdSeqStk.top()->cmds.emplace_back(
                                         cint::cmdType::functionCall,
@@ -213,6 +218,21 @@ ND_FUNCTION_INVOCATION      : ND_IDENTIFIER CINT_DELIM_LPAREN ND_ARGUMENT_LIST C
                                         )
                                     );
                                     gFuncArgNames.clear();
+                                    std::string tmpVar;
+                                    while (cint::isTempNameExist(tmpVar = 
+                                                                    cint::genRandomStr(TEMP_NAME_LEN, true),
+                                                                                       *gpExistTmpVar));
+                                    cmdSeqStk.top()->cmds.emplace_back(
+                                        cint::cmdType::unaryOperation,
+                                        std::unique_ptr<cint::unaryOperation>(
+                                            new cint::unaryOperation{
+                                                cint::unaryOprType::getReturnValue,
+                                                {tmpVar}
+                                            }
+                                        )
+                                    );
+                                    $$ = cint::yaccInfo(cint::yaccInfo::infoType::varName,
+                                                        std::move(tmpVar));
                                 }
                             ;
 
@@ -387,7 +407,29 @@ ND_CONTROL_COMMAND          : CINT_CTRL_BREAK CINT_DELIM_SEMICOLON
                                                                        (new loopBrkOperation()));
                                 }
                             | CINT_CTRL_CONTINUE CINT_DELIM_SEMICOLON
+                                {
+                                    using namespace cint;
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::loopContinue,
+                                                                       std::unique_ptr<loopContOperation>
+                                                                       (new loopContOperation()));
+                                }
                             | CINT_CTRL_RETURN CINT_DELIM_SEMICOLON
+                                {
+                                    using namespace cint;
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::functionReturnVoid,
+                                                                       std::unique_ptr<funcRetVoidOperation>
+                                                                       (new funcRetVoidOperation()));
+                                }
+                            | CINT_CTRL_RETURN ND_EXPRESSION CINT_DELIM_SEMICOLON
+                                {
+                                    using namespace cint;
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::functionReturnVal,
+                                                                       std::unique_ptr<funcRetValOperation>
+                                                                       (new funcRetValOperation{
+                                                                           *reinterpret_cast<std::string*>
+                                                                           ($2.data)
+                                                                       }));
+                                }
                             ;
 
  /* Do arithmic operation. */
@@ -417,11 +459,19 @@ ND_ARITHMIC_OPERATION       : ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_D
                                         }
                                     ));
                                 }
+                            | ND_EXPRESSION CINT_DELIM_SEMICOLON
                             ;
 
 
  /* Expression hierachy. Lowest 13, Highest 1 */
-ND_EXPRESSION               : ND_EXPRESSION_13
+ND_EXPRESSION               : ND_EXPRESSION_14
+                                {
+                                    $$ = $1;
+                                }
+                            ;
+
+
+ND_EXPRESSION_14            : ND_EXPRESSION_13
                                 {
                                     $$ = $1;
                                 }
@@ -616,6 +666,10 @@ ND_EXPRESSION_1             : ND_IDENTIFIER
                                 {
                                     $$ = $1;
                                 }
+                            | ND_FUNCTION_INVOCATION
+                                {
+                                    $$ = $1;
+                                }
                             ;
 
  /* Literals used as a constant variable. */
@@ -703,7 +757,7 @@ int yywrap()
     std::cout << std::endl
               << "### start program execution ###" << std::endl;
 
-    cint::executionManager exeMgr(&cint::getFuncMgr().getFunction("main")->cmds);
+    cint::executionManager exeMgr("main");
     exeMgr.run();
 
     return 1;

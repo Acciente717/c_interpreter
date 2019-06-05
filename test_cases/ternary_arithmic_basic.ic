@@ -1,5 +1,6 @@
 void main()
-{int ival1;
+{
+    int ival1;
     int ival2;
     int ival3;
     ival1 = 2333; ival2 = 1111;

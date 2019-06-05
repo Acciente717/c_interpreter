@@ -4,6 +4,7 @@
 
 #include "intermediateCommand.hh"
 #include "variableManager.hh"
+#include "functionManager.hh"
 
 namespace cint
 {
@@ -12,6 +13,7 @@ class executionManager
 {
     std::vector<const cmdSeq *> nestedCmds;
     std::vector<int> nestedCmdIdxs;
+    std::vector<int> nestedRetTypes;
 
     void exeUnaryOpr(const unaryOperation *pOpr);
     void exeBinaryOpr(const binaryOperation *pOpr);
@@ -19,7 +21,8 @@ class executionManager
     void exeReadArrOpr(const readArrayOperation *pOpr);
     void exeWriteArrOpr(const writeArrayOperation *pOpr);
     void exeFuncCallOpr(const funcCallOperation *pOpr);
-    void exeFuncRetOpr(const funcRetOperation *pOpr);
+    void exeFuncRetVoidOpr(const funcRetVoidOperation *pOpr);
+    void exeFuncRetValOpr(const funcRetValOperation *pOpr);
     void exeLoopContOpr(const loopContOperation *pOpr);
     void exeLoopBrkOpr(const loopBrkOperation *pOpr);
     void exeLoopGuardOpr(const loopGuardOperation *pOpr);
@@ -31,14 +34,16 @@ class executionManager
     void exeDeclVarOpr(const declVarOperation *pOpr);
     void execute(const command &cmd);
  public:
-    inline explicit executionManager(const cmdSeq *init_cmds);
+    inline explicit executionManager(const std::string &entryFunc);
     void run();
 };
 
-inline executionManager::executionManager(const cmdSeq *init_cmds)
+inline executionManager::executionManager(const std::string &entryFunc)
 {
-    nestedCmds.push_back(init_cmds);
+    auto entry = getFuncMgr().getFunction(entryFunc);
+    nestedCmds.push_back(&entry->cmds);
     nestedCmdIdxs.push_back(0);
+    nestedRetTypes.push_back(entry->retType);
 }
 
 

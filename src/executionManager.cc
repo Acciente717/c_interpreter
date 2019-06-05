@@ -75,6 +75,8 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
             *reinterpret_cast<int32_t*>(new_data.get())
                 = *reinterpret_cast<const float*>(data);
             break;
+        default:
+            throw unknownSwitchCase("createConvertedVariable");
         }
         break;
     case CFLOAT:
@@ -88,6 +90,19 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
             *reinterpret_cast<float*>(new_data.get())
                 = *reinterpret_cast<const float*>(data);
             break;
+        default:
+            throw unknownSwitchCase("createConvertedVariable");
+        }
+        break;
+    case CVOID:
+        switch (srcTypeNum)
+        {
+        case CVOID:
+            *reinterpret_cast<float*>(new_data.get())
+                = *reinterpret_cast<const int32_t*>(data);
+            break;
+        default:
+            throw unknownSwitchCase("createConvertedVariable");
         }
         break;
     default:
@@ -204,7 +219,39 @@ inline void floatArithmic(ternaryOprType oprNum, void *px,
 
 void executionManager::exeUnaryOpr(const unaryOperation *pOpr)
 {
-    // currently no unary operation
+    int xType;
+    void *xPtr;
+
+    switch (pOpr->oprType)
+    {
+    case unaryOprType::getReturnValue:
+        // If x is a temporary variable, we must first declare it to the
+        // variable manager.
+        if (pOpr->vars[0][0] == '#')
+        {
+            getVarMgr().declareVariable(
+            getTypeMgr().getTypenameByNum(getVarMgr().getReturnValueTypeNum()),
+            pOpr->vars[0]);
+        }
+        xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
+        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
+        if (xType != getVarMgr().getReturnValueTypeNum())
+        {
+            auto temp = createConvertedVariable(
+                xType,
+                getVarMgr().getReturnValueTypeNum(),
+                getVarMgr().getReturnValueData());
+            memcpy(xPtr, temp.get(), basicTypesSize[xType]);
+        }
+        else
+        {
+            memcpy(xPtr, getVarMgr().getReturnValueData(),
+                   basicTypesSize[xType]);
+        }
+        break;
+    default:
+        throw unknownSwitchCase("executionManager::exeUnaryOpr");
+    }
 }
 
 void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
@@ -500,9 +547,15 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             );
         }
     }
+
+    // set return variable type
+    nestedRetTypes.push_back(pFunc->retType);
+
+    // set function return value to void
+    getVarMgr().setReturnValueToVoid();
 }
 
-void executionManager::exeFuncRetOpr(const funcRetOperation *pOpr)
+void executionManager::exeFuncRetVoidOpr(const funcRetVoidOperation *pOpr)
 {
     // search for the smallest function block
     ssize_t idx = nestedCmds.size() - 1;
@@ -511,8 +564,60 @@ void executionManager::exeFuncRetOpr(const funcRetOperation *pOpr)
             break;
     if (unlikely(idx < 0))
         throw badIntermediateCommand(
-            "executionManager::exeFuncRetOpr: "
+            "executionManager::exeFuncRetVoidOpr: "
             "function return outside a function");
+
+    // set return value to type void
+    getVarMgr().setReturnValueToVoid();
+    nestedRetTypes.pop_back();
+
+    // if we are exiting the outermost function
+    if (idx == 0)
+    {
+        for (int i = nestedCmds.size() - 1; i >= 0; --i)
+            getVarMgr().popScope();
+        nestedCmds.clear();
+        nestedCmdIdxs.clear();
+        return;
+    }
+
+    // update variable scope
+    for (int i = nestedCmds.size() - 1; i >= idx; --i)
+        getVarMgr().popScope();
+
+    // jump back to previous function
+    nestedCmds.resize(idx);
+    nestedCmdIdxs.resize(idx);
+}
+
+void executionManager::exeFuncRetValOpr(const funcRetValOperation *pOpr)
+{
+    // search for the smallest function block
+    ssize_t idx = nestedCmds.size() - 1;
+    for (; idx >= 0; --idx)
+        if (nestedCmds[idx]->type == cmdSeqType::function)
+            break;
+    if (unlikely(idx < 0))
+        throw badIntermediateCommand(
+            "executionManager::exeFuncRetValOpr: "
+            "function return outside a function");
+
+    // prepare return value
+    auto pRetValType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
+    auto pRetVal = getVarMgr().getVariableData(pOpr->vars[0]);
+    if (nestedRetTypes.back() != pRetValType)
+    {
+        auto temp = createConvertedVariable(nestedRetTypes.back(),
+                                            pRetValType, pRetVal);
+        getVarMgr().updateReturnValue(getTypeMgr().getTypenameByNum(
+            nestedRetTypes.back()), temp.get());
+    }
+    else
+    {
+        getVarMgr().updateReturnValue(getTypeMgr().getTypenameByNum(
+            pRetValType), pRetVal);
+    }
+    nestedRetTypes.pop_back();
 
     // if we are exiting the outermost function
     if (idx == 0)
@@ -708,8 +813,13 @@ void executionManager::execute(const command &cmd)
     case cmdType::functionCall:
         exeFuncCallOpr(reinterpret_cast<const funcCallOperation*>(cmd.opr));
         break;
-    case cmdType::functionReturn:
-        exeFuncRetOpr(reinterpret_cast<const funcRetOperation*>(cmd.opr));
+    case cmdType::functionReturnVoid:
+        exeFuncRetVoidOpr(reinterpret_cast<const funcRetVoidOperation*>
+                          (cmd.opr));
+        break;
+    case cmdType::functionReturnVal:
+        exeFuncRetValOpr(reinterpret_cast<const funcRetValOperation*>
+                          (cmd.opr));
         break;
     case cmdType::loopGuard:
         exeLoopGuardOpr(reinterpret_cast<const loopGuardOperation *>

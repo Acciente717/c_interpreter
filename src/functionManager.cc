@@ -39,6 +39,7 @@ void functionManager::defineFunction(
     const std::string &name,
     std::vector<int> &&paramTypeNums,
     std::vector<std::string> &&paramNames,
+    int retType,
     cmdSeq &&cmds)
 {
     auto iter = funcs.find(name);
@@ -46,6 +47,7 @@ void functionManager::defineFunction(
         throw redefiningFunction(name);
     funcs[name] = {std::move(paramTypeNums),
                    std::move(paramNames),
+                   retType,
                    std::move(cmds)};
 }
 

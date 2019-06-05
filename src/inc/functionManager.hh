@@ -29,6 +29,7 @@ struct functionInfo
 {
     std::vector<int> paramTypeNums;
     std::vector<std::string> paramNames;
+    int retType;
     cmdSeq cmds;
 };
 
@@ -44,6 +45,7 @@ class functionManager
     void defineFunction(const std::string &name,
                         std::vector<int> &&paramTypeNums,
                         std::vector<std::string> &&paramNames,
+                        int retType,
                         cmdSeq &&cmds);
     inline const decltype(funcs) *getAllDefinedFuncs();
     const functionInfo * getFunction(const std::string &name);

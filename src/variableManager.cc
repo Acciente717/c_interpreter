@@ -31,7 +31,12 @@ VariableInfo *VariableManager::searchVariableRecursive(
         auto iter = varStack[i].find(varName);
         if (iter != varStack[i].end())
             return &(iter->second);
+        if (funcIndicatorStack[i])
+            break;
     }
+    auto iter = globals.find(varName);
+    if (iter != globals.end())
+        return &(iter->second);
     return nullptr;
 }
 
@@ -102,9 +107,38 @@ int VariableManager::getVariableTypeNum(const std::string &varName)
 
 void VariableManager::popScope()
 {
-    for (auto item : varStack.back())
-        delete[] reinterpret_cast<uint8_t*>(item.second.data);
     varStack.pop_back();
+    funcIndicatorStack.pop_back();
+}
+
+void VariableManager::updateReturnValue(const std::string &typeName,
+                                        const void *updateData)
+{
+    auto typeNum = getTypeMgr().getTypeNumByName(typeName);
+    auto type = getTypeMgr().getTypeByNum(typeNum);
+
+    // update return value
+    std::unique_ptr<uint8_t[]> data(new uint8_t[type.getSize()]);
+    memcpy(data.get(), updateData, type.getSize());
+    returnValue = VariableInfo{typeNum, type.getSize(), data.get()};
+    data.release();
+}
+
+void *VariableManager::getReturnValueData()
+{
+    return returnValue.data;
+}
+
+int VariableManager::getReturnValueTypeNum()
+{
+    return returnValue.typeNum;
+}
+
+void VariableManager::setReturnValueToVoid()
+{
+    std::unique_ptr<uint8_t[]> data(new uint8_t[basicTypesSize[CVOID]]);
+    returnValue = VariableInfo(CVOID, basicTypesSize[CVOID], data.get());
+    data.release();
 }
 
 }  // namespace cint
