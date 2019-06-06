@@ -170,50 +170,50 @@ inline void int32Arithmic(ternaryOprType oprNum, void *px,
 inline void floatArithmic(ternaryOprType oprNum, void *px,
                           const void *py, const void *pz)
 {
-    auto *pIntX = reinterpret_cast<float*>(px);
-    auto *pIntY = reinterpret_cast<const float*>(py);
-    auto *pIntZ = reinterpret_cast<const float*>(pz);
+    auto *pFloatX = reinterpret_cast<float*>(px);
+    auto *pFloatY = reinterpret_cast<const float*>(py);
+    auto *pFloatZ = reinterpret_cast<const float*>(pz);
 
     switch (oprNum)
     {
     case ternaryOprType::assignSum:
-        *pIntX = *pIntY + *pIntZ;
+        *pFloatX = *pFloatY + *pFloatZ;
         break;
     case ternaryOprType::assignDifference:
-        *pIntX = *pIntY - *pIntZ;
+        *pFloatX = *pFloatY - *pFloatZ;
         break;
     case ternaryOprType::assignProduct:
-        *pIntX = *pIntY * *pIntZ;
+        *pFloatX = *pFloatY * *pFloatZ;
         break;
     case ternaryOprType::assignQuotient:
-        *pIntX = *pIntY / *pIntZ;
+        *pFloatX = *pFloatY / *pFloatZ;
         break;
     case ternaryOprType::assignResidue:
         throw unsupportedArithmic("cannot apply moduolo to floats");
         break;
     case ternaryOprType::assignLess:
-        *pIntX = static_cast<int32_t>(*pIntY < *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY < *pFloatZ);
         break;
     case ternaryOprType::assignLessEqual:
-        *pIntX = static_cast<int32_t>(*pIntY <= *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY <= *pFloatZ);
         break;
     case ternaryOprType::assignGreater:
-        *pIntX = static_cast<int32_t>(*pIntY > *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY > *pFloatZ);
         break;
     case ternaryOprType::assignGreaterEqual:
-        *pIntX = static_cast<int32_t>(*pIntY >= *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY >= *pFloatZ);
         break;
     case ternaryOprType::assignEqual:
-        *pIntX = static_cast<int32_t>(*pIntY == *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY == *pFloatZ);
         break;
     case ternaryOprType::assignNotEqual:
-        *pIntX = static_cast<int32_t>(*pIntY != *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY != *pFloatZ);
         break;
     case ternaryOprType::assignLogicAnd:
-        *pIntX = static_cast<int32_t>(*pIntY && *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY && *pFloatZ);
         break;
     case ternaryOprType::assignLogicOr:
-        *pIntX = static_cast<int32_t>(*pIntY || *pIntZ);
+        *pFloatX = static_cast<int32_t>(*pFloatY || *pFloatZ);
         break;
     default:
         throw unknownSwitchCase("floatArithmic");
@@ -390,6 +390,7 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     }
     else
     {
+        superType = yInfo->getTypeNum();
         yPtr = yInfo->getData();
         zPtr = zInfo->getData();
     }
