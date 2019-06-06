@@ -13,4 +13,7 @@ void main()
     val2 = val1;
     cputint(val2);
     cputchar(10);
+    val2 = val2;
+    cputint(val2);
+    cputchar(10);
 }

@@ -52,6 +52,10 @@ return   { return CINT_CTRL_RETURN; }
     gLexInteger = yytext;
     return CINT_INTEGER;
 }
+"0"[Xx][0-9]+ {
+    gLexInteger = yytext;
+    return CINT_INTEGER;
+}
 
  /* Float */
 [0-9]+\.[0-9]+ {

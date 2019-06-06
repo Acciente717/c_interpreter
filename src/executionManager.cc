@@ -1,4 +1,7 @@
 /* Copyright @2019 Zhiyao Ma */
+#include <thread>
+#include <chrono>
+
 #include "utils.hh"
 #include "executionManager.hh"
 #include "functionManager.hh"
@@ -266,6 +269,8 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
         yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
         xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
         yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
+        if (xPtr == yPtr)
+            break;
         if (xType != yType)
         {
             auto temp = createConvertedVariable(xType, yType, yPtr);
@@ -765,6 +770,7 @@ void executionManager::exeBranchBrkOpr(const branchBrkOperation *pOpr)
 
     // quit branch
     nestedCmds.resize(idx);
+    nestedCmdIdxs.resize(idx);
 }
 
 void executionManager::exeNormalBlkOpr(const normalBlkOperation *pOpr)
@@ -870,6 +876,7 @@ void executionManager::run()
         // execute cmds
         ++nestedCmdIdxs.back();
         // printCmd(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1], 0);
+        // std::this_thread::sleep_for(std::chrono::milliseconds(500));
         execute(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1]);
     }
 }
