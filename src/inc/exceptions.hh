@@ -176,6 +176,18 @@ class funcArgumentError : public std::exception
     }
 };
 
+class badVariableOperation : public std::exception
+{
+    std::string msg;
+ public:
+    explicit badVariableOperation(const std::string &s)
+        : msg(s) {}
+    const char *what() const noexcept override
+    {
+        return msg.c_str();
+    }
+};
+
 }  // namespace cint
 
 #endif  // SRC_INC_EXCEPTIONS_HH

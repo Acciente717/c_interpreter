@@ -222,8 +222,7 @@ inline void floatArithmic(ternaryOprType oprNum, void *px,
 
 void executionManager::exeUnaryOpr(const unaryOperation *pOpr)
 {
-    int xType;
-    void *xPtr;
+    decltype(getVarMgr().getVariableInfo("")) xInfo;
 
     switch (pOpr->oprType)
     {
@@ -234,22 +233,20 @@ void executionManager::exeUnaryOpr(const unaryOperation *pOpr)
         {
             getVarMgr().declareVariable(
             getTypeMgr().getTypenameByNum(getVarMgr().getReturnValueTypeNum()),
-            pOpr->vars[0]);
+            pOpr->vars[0], true);
         }
-        xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
-        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
-        if (xType != getVarMgr().getReturnValueTypeNum())
+        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+        if (xInfo->getTypeNum() != getVarMgr().getReturnValueTypeNum())
         {
             auto temp = createConvertedVariable(
-                xType,
+                xInfo->getTypeNum(),
                 getVarMgr().getReturnValueTypeNum(),
                 getVarMgr().getReturnValueData());
-            memcpy(xPtr, temp.get(), basicTypesSize[xType]);
+            xInfo->updateData(temp.get());
         }
         else
         {
-            memcpy(xPtr, getVarMgr().getReturnValueData(),
-                   basicTypesSize[xType]);
+            xInfo->updateData(getVarMgr().getReturnValueData());
         }
         break;
     default:
@@ -259,43 +256,42 @@ void executionManager::exeUnaryOpr(const unaryOperation *pOpr)
 
 void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
 {
-    int xType, yType;
-    void *xPtr, *yPtr;
+    decltype(getVarMgr().getVariableInfo("")) xInfo, yInfo;
 
     switch (pOpr->oprType)
     {
     case binaryOprType::assignVariable:
-        xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
-        yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
-        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
-        yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
-        if (xPtr == yPtr)
+        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+        yInfo = getVarMgr().getVariableInfo(pOpr->vars[1]);
+        if (xInfo->getData() == yInfo->getData())
             break;
-        if (xType != yType)
+        if (xInfo->getTypeNum() != yInfo->getTypeNum())
         {
-            auto temp = createConvertedVariable(xType, yType, yPtr);
-            memcpy(xPtr, temp.get(), basicTypesSize[xType]);
+            auto temp = createConvertedVariable(
+                xInfo->getTypeNum(),
+                yInfo->getTypeNum(),
+                yInfo->getData());
+            xInfo->updateData(temp.get());
         }
         else
         {
-            memcpy(xPtr, yPtr, basicTypesSize[xType]);
+            xInfo->updateData(yInfo->getData());
         }
         break;
     case binaryOprType::assignLiteral:
-        xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
-        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
-        switch (xType)
+        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+        switch (xInfo->getTypeNum())
         {
         case CINT32:
             {
                 auto value = std::stoi(pOpr->vars[1]);
-                memcpy(xPtr, &value, basicTypesSize[CINT32]);
+                xInfo->updateData(&value);
             }
             break;
         case CFLOAT:
             {
                 auto value = std::stof(pOpr->vars[1]);
-                memcpy(xPtr, &value, basicTypesSize[CFLOAT]);
+                xInfo->updateData(&value);
             }
             break;
         default:
@@ -310,49 +306,47 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
         {
             getVarMgr().declareVariable(
                 getTypeMgr().getTypenameByNum(CINT32),
-                pOpr->vars[0]);
+                pOpr->vars[0], true);
         }
 
-        yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
-        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
-        yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
-        switch (yType)
+        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+        yInfo = getVarMgr().getVariableInfo(pOpr->vars[1]);
+        switch (yInfo->getTypeNum())
         {
         case CINT32:
-            *reinterpret_cast<uint32_t *>(xPtr) =
-                !*reinterpret_cast<uint32_t *>(yPtr);
+            *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
+                !*reinterpret_cast<int32_t *>(yInfo->getData());
             break;
         case CFLOAT:
-            *reinterpret_cast<uint32_t *>(xPtr) =
-                !*reinterpret_cast<float *>(yPtr);
+            *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
+                !*reinterpret_cast<float *>(yInfo->getData());
             break;
         default:
             throw unknownSwitchCase("executionManager::exeBinaryOpr");
         }
         break;
     case binaryOprType::assignNegate:
-        yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
+        yInfo = getVarMgr().getVariableInfo(pOpr->vars[1]);
 
         // If x is a temporary variable, we must first declare it to the
         // variable manager.
         if (pOpr->vars[0][0] == '#')
         {
             getVarMgr().declareVariable(
-                getTypeMgr().getTypenameByNum(yType),
-                pOpr->vars[0]);
+                getTypeMgr().getTypenameByNum(yInfo->getTypeNum()),
+                pOpr->vars[0], true);
         }
+        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
 
-        xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
-        yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
-        switch (yType)
+        switch (yInfo->getTypeNum())
         {
         case CINT32:
-            *reinterpret_cast<uint32_t *>(xPtr) =
-                -*reinterpret_cast<uint32_t *>(yPtr);
+            *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
+                -*reinterpret_cast<int32_t *>(yInfo->getData());
             break;
         case CFLOAT:
-            *reinterpret_cast<float *>(xPtr) =
-                -*reinterpret_cast<float *>(yPtr);
+            *reinterpret_cast<float *>(xInfo->getMutableData()) =
+                -*reinterpret_cast<float *>(yInfo->getData());
             break;
         default:
             throw unknownSwitchCase("executionManager::exeBinaryOpr");
@@ -365,29 +359,39 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
 
 void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
 {
-    auto yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
-    auto zType = getVarMgr().getVariableTypeNum(pOpr->vars[2]);
-    auto yPtr = getVarMgr().getVariableData(pOpr->vars[1]);
-    auto zPtr = getVarMgr().getVariableData(pOpr->vars[2]);
+    decltype(getVarMgr().getVariableInfo("")) yInfo, zInfo;
+    const void *yPtr, *zPtr;
     void *tgtPtr;
 
     std::unique_ptr<uint8_t[]> xSmart, ySmart, zSmart;
     int superType;
 
+    yInfo = getVarMgr().getVariableInfo(pOpr->vars[1]);
+    zInfo = getVarMgr().getVariableInfo(pOpr->vars[2]);
+
     // if y and z have different types, convert them before proceeding
-    if (yType != zType)
+    if (yInfo->getTypeNum() != zInfo->getTypeNum())
     {
-        superType = typeManager::chooseSuperType(yType, zType);
-        if (yType != superType)
+        superType = typeManager::chooseSuperType(
+            yInfo->getTypeNum(),
+            zInfo->getTypeNum());
+        if (yInfo->getTypeNum() != superType)
         {
-            ySmart = createConvertedVariable(superType, yType, yPtr);
+            ySmart = createConvertedVariable(superType, yInfo->getTypeNum(),
+                                             yInfo->getData());
             yPtr = ySmart.get();
         }
-        if (zType != superType)
+        if (zInfo->getTypeNum() != superType)
         {
-            zSmart = createConvertedVariable(superType, zType, zPtr);
+            zSmart = createConvertedVariable(superType, zInfo->getTypeNum(),
+                                             zInfo->getData());
             zPtr = zSmart.get();
         }
+    }
+    else
+    {
+        yPtr = yInfo->getData();
+        zPtr = zInfo->getData();
     }
 
     // If x is a temporary variable, we must first declare it to the
@@ -396,11 +400,10 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     {
         getVarMgr().declareVariable(
             getTypeMgr().getTypenameByNum(superType),
-            pOpr->vars[0]);
+            pOpr->vars[0], true);
     }
 
-    auto xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
-    auto xPtr = getVarMgr().getVariableData(pOpr->vars[0]);
+    auto xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
 
     // If x has different types from (y OP z), create a temporary variable
     // for x. For arithmic operations, create a temporaty variable with
@@ -414,14 +417,14 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     case ternaryOprType::assignProduct:
     case ternaryOprType::assignQuotient:
     case ternaryOprType::assignResidue:
-        if (xType != superType)
+        if (xInfo->getTypeNum() != superType)
         {
             xSmart.reset(new uint8_t[basicTypesSize[superType]]);
             tgtPtr = xSmart.get();
         }
         else
         {
-            tgtPtr = xPtr;
+            tgtPtr = xInfo->getMutableData();
         }
         break;
 
@@ -434,14 +437,14 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     case ternaryOprType::assignNotEqual:
     case ternaryOprType::assignLogicAnd:
     case ternaryOprType::assignLogicOr:
-        if (xType != CINT32)
+        if (xInfo->getTypeNum() != CINT32)
         {
             xSmart.reset(new uint8_t[basicTypesSize[CINT32]]);
             tgtPtr = xSmart.get();
         }
         else
         {
-            tgtPtr = xPtr;
+            tgtPtr = xInfo->getMutableData();
         }
         break;
     default:
@@ -463,10 +466,11 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
 
     // if we previous write to the temporary variable, convert and
     // write back to x
-    if (xType != superType)
+    if (xInfo->getTypeNum() != superType)
     {
-        xSmart = createConvertedVariable(xType, superType, xSmart.get());
-        memcpy(xPtr, xSmart.get(), basicTypesSize[xType]);
+        xSmart = createConvertedVariable(
+            xInfo->getTypeNum(), superType, xSmart.get());
+        xInfo->updateData(xSmart.get());
     }
 }
 
@@ -498,13 +502,14 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             auto paramType = pBuiltin->paramTypeNums[i];
             if (varType == paramType)
             {
-                pargs[i] = getVarMgr().getVariableData(pOpr->varVec[i]);
+                pargs[i] = getVarMgr().getVariableInfo(pOpr->varVec[i])
+                           ->getData();
             }
             else
             {
                 tmpVars.emplace_back(createConvertedVariable(
                     paramType, varType,
-                    getVarMgr().getVariableData(pOpr->varVec[i])
+                    getVarMgr().getVariableInfo(pOpr->varVec[i])->getData()
                 ));
                 pargs[i] = tmpVars.back().get();
             }
@@ -535,12 +540,13 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
         {
             auto cvtedVar = createConvertedVariable(
                 paramType, varType,
-                getVarMgr().getVariableData(pOpr->varVec[i])
+                getVarMgr().getVariableInfo(pOpr->varVec[i])->getData()
             );
             getVarMgr().initializeVariable(
                 getTypeMgr().getTypenameByNum(paramType),
                 pFunc->paramNames[i],
-                cvtedVar.get()
+                cvtedVar.get(),
+                true
             );
         }
         else
@@ -548,7 +554,8 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             getVarMgr().initializeVariable(
                 getTypeMgr().getTypenameByNum(paramType),
                 pFunc->paramNames[i],
-                getVarMgr().getVariableData(pOpr->varVec[i])
+                getVarMgr().getVariableInfo(pOpr->varVec[i])->getData(),
+                true
             );
         }
     }
@@ -609,7 +616,7 @@ void executionManager::exeFuncRetValOpr(const funcRetValOperation *pOpr)
 
     // prepare return value
     auto pRetValType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
-    auto pRetVal = getVarMgr().getVariableData(pOpr->vars[0]);
+    auto pRetVal = getVarMgr().getVariableInfo(pOpr->vars[0])->getData();
     if (nestedRetTypes.back() != pRetValType)
     {
         auto temp = createConvertedVariable(nestedRetTypes.back(),
@@ -718,7 +725,7 @@ void executionManager::exeLoopGuardOpr(const loopGuardOperation *pOpr)
             "loop guard in non-loop block");
 
     // exit the loop if condition is false
-    auto data = getVarMgr().getVariableData(pOpr->testVar);
+    auto data = getVarMgr().getVariableInfo(pOpr->testVar)->getData();
     if (*reinterpret_cast<int *>(data) == 0)
     {
         nestedCmds.pop_back();
@@ -783,7 +790,7 @@ void executionManager::exeNormalBlkOpr(const normalBlkOperation *pOpr)
 void executionManager::exeCondBlkOpr(const condBlkOperation *pOpr)
 {
     // enter the conditional block if the condition holds true
-    auto data = getVarMgr().getVariableData(pOpr->testVar);
+    auto data = getVarMgr().getVariableInfo(pOpr->testVar)->getData();
     if (*reinterpret_cast<int*>(data) != 0)
     {
         nestedCmds.push_back(&(pOpr->cmdseq));
@@ -794,7 +801,7 @@ void executionManager::exeCondBlkOpr(const condBlkOperation *pOpr)
 
 void executionManager::exeDeclVarOpr(const declVarOperation *pOpr)
 {
-    getVarMgr().declareVariable(pOpr->type, pOpr->var);
+    getVarMgr().declareVariable(pOpr->type, pOpr->var, false);
 }
 
 void executionManager::execute(const command &cmd)
@@ -876,6 +883,7 @@ void executionManager::run()
         // execute cmds
         ++nestedCmdIdxs.back();
         // printCmd(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1], 0);
+        // std::cout.flush();
         // std::this_thread::sleep_for(std::chrono::milliseconds(500));
         execute(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1]);
     }

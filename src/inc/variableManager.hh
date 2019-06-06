@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <memory>
 
 #include "typeManager.hh"
 
@@ -15,56 +16,78 @@ namespace cint
 *               Type Declarations                *
 *************************************************/
 
-struct VariableInfo
+class VariableInfoBase
 {
-    int typeNum;
-    unsigned typeSize;
+ protected:
+    int baseTypeNum;
+    unsigned baseTypeSize;
     void *data;
+    bool isReference;
+    bool isTemporary;
 
-    VariableInfo() = delete;
-    explicit VariableInfo(decltype(typeNum) _typeNum,
-                          decltype(typeSize) _typeSize,
-                          decltype(data) _data) noexcept
-    {
-        typeNum = _typeNum;
-        typeSize = _typeSize;
-        data = _data;
-    }
-    VariableInfo(const VariableInfo &other) = delete;
-    VariableInfo(VariableInfo &&other) noexcept
-    {
-        typeNum = other.typeNum;
-        typeSize = other.typeSize;
-        data = other.data;
-        other.data = nullptr;
-    }
-    VariableInfo& operator=(const VariableInfo &other) = delete;
-    VariableInfo& operator=(VariableInfo &&other) noexcept
-    {
-        delete[] reinterpret_cast<uint8_t*>(data);
-        typeNum = other.typeNum;
-        typeSize = other.typeSize;
-        data = other.data;
-        other.data = nullptr;
-        return *this;
-    }
-    ~VariableInfo() { delete[] reinterpret_cast<uint8_t*>(data); }
+ protected:
+    inline VariableInfoBase(decltype(baseTypeNum) _baseTypeNum,
+                            decltype(baseTypeSize) _baseTypeSize,
+                            decltype(data) _data,
+                            decltype(isReference) _isReference,
+                            decltype(isTemporary) _isTemporary) noexcept;
+    inline VariableInfoBase(VariableInfoBase &&other) noexcept;
+    inline VariableInfoBase& operator=(VariableInfoBase &&other) noexcept;
+
+ public:
+    VariableInfoBase() = delete;
+    VariableInfoBase(const VariableInfoBase &other) = delete;
+    VariableInfoBase& operator=(const VariableInfoBase &other) = delete;
+    virtual ~VariableInfoBase();
+
+    virtual decltype(baseTypeNum) getTypeNum() const noexcept = 0;
+    virtual decltype(baseTypeSize) getTypeSize() const noexcept = 0;
+    virtual const decltype(data) getData() const noexcept = 0;
+    virtual decltype(data) getMutableData() noexcept = 0;
+    virtual decltype(isReference) getIsReference() const noexcept = 0;
+    virtual void updateData(const void *new_data) = 0;
+    virtual void setReference(void *new_ref) = 0;
 };
 
-using variableDictionary = std::unordered_map<std::string, VariableInfo>;
+class VariableInfoSolid : public VariableInfoBase
+{
+ public:
+    VariableInfoSolid() = delete;
+    VariableInfoSolid(const VariableInfoSolid &other) = delete;
+    VariableInfoSolid& operator=(const VariableInfoSolid &other) = delete;
+    explicit VariableInfoSolid(decltype(baseTypeNum) _baseTypeNum,
+                               decltype(baseTypeSize) _baseTypeSize,
+                               decltype(data) _data,
+                               decltype(isTemporary) _isTemporary) noexcept;
+    explicit VariableInfoSolid(VariableInfoSolid &&other) noexcept;
+    VariableInfoSolid& operator=(VariableInfoSolid &&other) noexcept;
+    ~VariableInfoSolid() override;
+
+    decltype(baseTypeNum) getTypeNum() const noexcept override;
+    decltype(baseTypeSize) getTypeSize() const noexcept override;
+    const decltype(data) getData() const noexcept override;
+    decltype(data) getMutableData() noexcept override;
+    decltype(isReference) getIsReference() const noexcept override;
+    void updateData(const void *new_data) override;
+    void setReference(void *new_ref) override;
+};
+
+using variableDictionary =
+    std::unordered_map<std::string,
+                       std::unique_ptr<VariableInfoBase> >;
 
 class VariableManager
 {
     std::vector<variableDictionary> varStack;
     std::vector<uint8_t> funcIndicatorStack;
     variableDictionary globals;
-    VariableInfo returnValue;
+    std::unique_ptr<VariableInfoBase> pReturnValue;
 
-    inline VariableInfo *searchVariableCurrentScope(
+    inline VariableInfoBase *searchVariableCurrentScope(
         const std::string &varName
     );
 
-    VariableInfo *searchVariableRecursive(
+    VariableInfoBase *searchVariableRecursive(
         const std::string &varName
     );
  public:
@@ -74,16 +97,19 @@ class VariableManager
     inline void newScope(bool isFunction = false);
     void popScope();
     void declareVariable(const std::string &typeName,
-                         const std::string &varName);
+                         const std::string &varName,
+                         bool isTemporary);
     void initializeVariable(const std::string &typeName,
                             const std::string &varName,
-                            const void *initData);
+                            const void *initData,
+                            bool isTemporary);
     void assignVariable(const std::string &varName, const void *data);
-    void *getVariableData(const std::string &varName);
+    // const void *getVariableData(const std::string &varName);
+    VariableInfoBase *getVariableInfo(const std::string &varName);
     int getVariableTypeNum(const std::string &varName);
     void updateReturnValue(const std::string &typeName,
                            const void *updateData);
-    void *getReturnValueData();
+    const void *getReturnValueData();
     int getReturnValueTypeNum();
     void setReturnValueToVoid();
 };
@@ -95,19 +121,21 @@ VariableManager& getVarMgr();
 *************************************************/
 
 inline VariableManager::VariableManager()
-    : returnValue(CVOID, 1, new uint8_t[1])
 {
+    pReturnValue = std::make_unique<VariableInfoSolid>(
+        CVOID, 1, new uint8_t[1], true
+    );
     varStack.emplace_back();
     funcIndicatorStack.push_back(0);
 }
 
-inline VariableInfo* VariableManager::searchVariableCurrentScope(
+inline VariableInfoBase* VariableManager::searchVariableCurrentScope(
     const std::string &varName)
 {
     auto iter = varStack.back().find(varName);
     if (iter == varStack.back().end())
         return nullptr;
-    return &(iter->second);
+    return iter->second.get();
 }
 
 inline void VariableManager::newScope(bool isFunction)

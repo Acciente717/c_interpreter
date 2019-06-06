@@ -9,6 +9,106 @@
 namespace cint
 {
 
+VariableInfoBase::~VariableInfoBase()
+{
+    if (!isReference)
+        delete[] reinterpret_cast<uint8_t*>(data);
+}
+
+VariableInfoBase::VariableInfoBase(
+    decltype(VariableInfoBase::baseTypeNum) _baseTypeNum,
+    decltype(VariableInfoBase::baseTypeSize) _baseTypeSize,
+    decltype(VariableInfoBase::data) _data,
+    decltype(VariableInfoBase::isReference) _isReference,
+    decltype(VariableInfoBase::isTemporary) _isTemporary) noexcept
+  : baseTypeNum(_baseTypeNum), baseTypeSize(_baseTypeSize),
+    data(_data), isReference(_isReference), isTemporary(_isTemporary) {}
+
+VariableInfoBase::VariableInfoBase(
+    VariableInfoBase &&other) noexcept
+  : baseTypeNum(other.baseTypeNum), baseTypeSize(other.baseTypeSize),
+    data(other.data), isReference(other.isReference),
+    isTemporary(other.isTemporary)
+{
+    other.data = nullptr;
+}
+
+VariableInfoBase& VariableInfoBase::operator=(
+    VariableInfoBase &&other) noexcept
+{
+    delete[] reinterpret_cast<uint8_t*>(data);
+    baseTypeNum = other.baseTypeNum;
+    baseTypeSize = other.baseTypeSize;
+    data = other.data;
+    isReference = other.isReference;
+    isTemporary = other.isTemporary;
+    other.data = nullptr;
+    return *this;
+}
+
+decltype(VariableInfoSolid::baseTypeNum)
+    VariableInfoSolid::getTypeNum() const noexcept
+{
+    return baseTypeNum;
+}
+
+decltype(VariableInfoSolid::baseTypeSize)
+    VariableInfoSolid::getTypeSize() const noexcept
+{
+    return baseTypeSize;
+}
+
+const decltype(VariableInfoSolid::data)
+    VariableInfoSolid::getData() const noexcept
+{
+    return data;
+}
+
+decltype(VariableInfoSolid::data)
+    VariableInfoSolid::getMutableData() noexcept
+{
+    return data;
+}
+
+decltype(VariableInfoSolid::isReference)
+    VariableInfoSolid::getIsReference() const noexcept
+{
+    return isReference;
+}
+
+void VariableInfoSolid::updateData(const void *new_data)
+{
+    memcpy(data, new_data, baseTypeSize);
+}
+
+void VariableInfoSolid::setReference(void *new_ref)
+{
+    throw badVariableOperation("VariableInfoSolid::setReference");
+}
+
+
+VariableInfoSolid::VariableInfoSolid(
+    decltype(baseTypeNum) _baseTypeNum,
+    decltype(baseTypeSize) _baseTypeSize,
+    decltype(data) _data,
+    decltype(isTemporary) _isTemporary) noexcept
+  : VariableInfoBase(_baseTypeNum, _baseTypeSize, _data, false, _isTemporary)
+{ }
+
+VariableInfoSolid::VariableInfoSolid(VariableInfoSolid &&other) noexcept
+  : VariableInfoBase(std::move(other))
+{ }
+
+VariableInfoSolid& VariableInfoSolid::operator=(
+    VariableInfoSolid &&other) noexcept
+{
+    VariableInfoSolid::operator=(std::move(other));
+    return *this;
+}
+
+VariableInfoSolid::~VariableInfoSolid()
+{ }
+
 VariableManager& getVarMgr()
 {
     static VariableManager mgr;
@@ -22,7 +122,7 @@ VariableManager::~VariableManager() noexcept
         popScope();
 }
 
-VariableInfo *VariableManager::searchVariableRecursive(
+VariableInfoBase *VariableManager::searchVariableRecursive(
     const std::string &varName
 )
 {
@@ -30,18 +130,19 @@ VariableInfo *VariableManager::searchVariableRecursive(
     {
         auto iter = varStack[i].find(varName);
         if (iter != varStack[i].end())
-            return &(iter->second);
+            return iter->second.get();
         if (funcIndicatorStack[i])
             break;
     }
     auto iter = globals.find(varName);
     if (iter != globals.end())
-        return &(iter->second);
+        return iter->second.get();
     return nullptr;
 }
 
 void VariableManager::declareVariable(const std::string &typeName,
-                                      const std::string &varName)
+                                      const std::string &varName,
+                                      bool isTemporary)
 {
     // duplicate variable declaration
     auto pVar = searchVariableCurrentScope(varName);
@@ -53,15 +154,18 @@ void VariableManager::declareVariable(const std::string &typeName,
 
     // insert new variable
     std::unique_ptr<uint8_t[]> data(new uint8_t[type.getSize()]);
-    varStack.back().emplace(varName,
-                            VariableInfo{typeNum, type.getSize(), data.get()});
+    varStack.back().emplace(
+        varName,
+        std::make_unique<VariableInfoSolid>
+            (typeNum, type.getSize(), data.get(), isTemporary));
     data.release();
 }
 
 
 void VariableManager::initializeVariable(const std::string &typeName,
                                          const std::string &varName,
-                                         const void *initData)
+                                         const void *initData,
+                                         bool isTemporary)
 {
     // duplicate variable declaration
     auto pVar = searchVariableCurrentScope(varName);
@@ -74,8 +178,10 @@ void VariableManager::initializeVariable(const std::string &typeName,
     // insert new variable
     std::unique_ptr<uint8_t[]> data(new uint8_t[type.getSize()]);
     memcpy(data.get(), initData, type.getSize());
-    varStack.back().emplace(varName,
-                            VariableInfo{typeNum, type.getSize(), data.get()});
+    varStack.back().emplace(
+        varName,
+        std::make_unique<VariableInfoSolid>
+            (typeNum, type.getSize(), data.get(), isTemporary));
     data.release();
 }
 
@@ -85,15 +191,23 @@ void VariableManager::assignVariable(const std::string &varName,
     auto pVar = searchVariableRecursive(varName);
     if (!pVar)
         throw unknownVariableName(varName);
-    memcpy(pVar->data, data, pVar->typeSize);
+    pVar->updateData(data);
 }
 
-void *VariableManager::getVariableData(const std::string &varName)
+// const void *VariableManager::getVariableData(const std::string &varName)
+// {
+//     auto pVar = searchVariableRecursive(varName);
+//     if (!pVar)
+//         throw unknownVariableName(varName);
+//     return pVar->getData();
+// }
+
+VariableInfoBase *VariableManager::getVariableInfo(const std::string &varName)
 {
     auto pVar = searchVariableRecursive(varName);
     if (!pVar)
         throw unknownVariableName(varName);
-    return pVar->data;
+    return pVar;
 }
 
 
@@ -102,7 +216,7 @@ int VariableManager::getVariableTypeNum(const std::string &varName)
     auto pVar = searchVariableRecursive(varName);
     if (!pVar)
         throw unknownVariableName(varName);
-    return pVar->typeNum;
+    return pVar->getTypeNum();
 }
 
 void VariableManager::popScope()
@@ -120,24 +234,26 @@ void VariableManager::updateReturnValue(const std::string &typeName,
     // update return value
     std::unique_ptr<uint8_t[]> data(new uint8_t[type.getSize()]);
     memcpy(data.get(), updateData, type.getSize());
-    returnValue = VariableInfo{typeNum, type.getSize(), data.get()};
+    pReturnValue = std::make_unique<VariableInfoSolid>
+                    (typeNum, type.getSize(), data.get(), true);
     data.release();
 }
 
-void *VariableManager::getReturnValueData()
+const void *VariableManager::getReturnValueData()
 {
-    return returnValue.data;
+    return pReturnValue->getData();
 }
 
 int VariableManager::getReturnValueTypeNum()
 {
-    return returnValue.typeNum;
+    return pReturnValue->getTypeNum();
 }
 
 void VariableManager::setReturnValueToVoid()
 {
     std::unique_ptr<uint8_t[]> data(new uint8_t[basicTypesSize[CVOID]]);
-    returnValue = VariableInfo(CVOID, basicTypesSize[CVOID], data.get());
+    pReturnValue = std::make_unique<VariableInfoSolid>
+                    (CVOID, basicTypesSize[CVOID], data.get(), true);
     data.release();
 }
 
