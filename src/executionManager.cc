@@ -220,6 +220,20 @@ inline void floatArithmic(ternaryOprType oprNum, void *px,
     }
 }
 
+std::vector<int> prepareIndicies(const std::vector<std::string> &charIndicies)
+{
+    std::vector<int> res;
+    for (const auto &i : charIndicies)
+    {
+        auto info = getVarMgr().getVariableInfo(i);
+        if (unlikely(info->getTypeNum() != CINT32))
+            throw badIntermediateCommand("prepareIndicies: indicies all are"
+                                         " not in type `int`");
+        res.push_back(*reinterpret_cast<const int*>(info->getData()));
+    }
+    return res;
+}
+
 void executionManager::exeUnaryOpr(const unaryOperation *pOpr)
 {
     decltype(getVarMgr().getVariableInfo("")) xInfo;
@@ -315,11 +329,11 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
         {
         case CINT32:
             *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
-                !*reinterpret_cast<int32_t *>(yInfo->getData());
+                !*reinterpret_cast<const int32_t *>(yInfo->getData());
             break;
         case CFLOAT:
             *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
-                !*reinterpret_cast<float *>(yInfo->getData());
+                !*reinterpret_cast<const float *>(yInfo->getData());
             break;
         default:
             throw unknownSwitchCase("executionManager::exeBinaryOpr");
@@ -342,11 +356,11 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
         {
         case CINT32:
             *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
-                -*reinterpret_cast<int32_t *>(yInfo->getData());
+                -*reinterpret_cast<const int32_t *>(yInfo->getData());
             break;
         case CFLOAT:
             *reinterpret_cast<float *>(xInfo->getMutableData()) =
-                -*reinterpret_cast<float *>(yInfo->getData());
+                -*reinterpret_cast<const float *>(yInfo->getData());
             break;
         default:
             throw unknownSwitchCase("executionManager::exeBinaryOpr");
@@ -477,12 +491,99 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
 
 void executionManager::exeReadArrOpr(const readArrayOperation *pOpr)
 {
-    throw notImplemented("executionManager::exeReadArrOpr");
+    auto rawInfo = getVarMgr().getVariableInfo(pOpr->arName);
+    if (unlikely(rawInfo->getTypeNum() != CARRAY))
+        throw badIntermediateCommand("executionManager::exeReadArrOpr: "
+                                     "read array operation is performing"
+                                     " on a non-array variable");
+    auto arInfo = static_cast<VariableInfoArray *>(rawInfo);
+    auto intVec = prepareIndicies(pOpr->idxs);
+
+    auto readedVarInfo = arInfo->address(intVec);
+
+    // we get a single element from the array
+    if (readedVarInfo->getTypeNum() != CARRAY)
+    {
+        // If x is a temporary variable, we must first declare it to the
+        // variable manager.
+        if (pOpr->tgtName[0] == '#')
+        {
+            getVarMgr().declareVariable(
+                getTypeMgr().getTypenameByNum(readedVarInfo->getTypeNum()),
+                pOpr->tgtName, true);
+        }
+
+        auto tgtInfo = getVarMgr().getVariableInfo(pOpr->tgtName);
+        if (tgtInfo->getTypeNum() != readedVarInfo->getTypeNum())
+        {
+            auto temp = createConvertedVariable(
+                tgtInfo->getTypeNum(), readedVarInfo->getTypeNum(),
+                readedVarInfo->getData()
+            );
+            tgtInfo->updateData(temp.get());
+        }
+        else
+        {
+            tgtInfo->updateData(readedVarInfo->getData());
+        }
+    }
+    // we are still in the middle of a multi-dimentional array
+    else
+    {
+        // if we are assigning to a temporary variable,
+        // let it adopt the pointer directly
+        if (pOpr->tgtName[0] == '#')
+            getVarMgr().moveInArrayVariable(
+                pOpr->tgtName, std::move(readedVarInfo)
+            );
+        // else, assign the pointer value
+        else
+        {
+            auto tgtInfo = getVarMgr().getVariableInfo(pOpr->tgtName);
+            auto temp = createConvertedVariable(
+                tgtInfo->getTypeNum(), CARRAY, readedVarInfo->getData()
+            );
+            tgtInfo->updateData(temp.get());
+        }
+    }
 }
 
 void executionManager::exeWriteArrOpr(const writeArrayOperation *pOpr)
 {
-    throw notImplemented("executionManager::exeWriteArrOpr");
+    auto rawInfo = getVarMgr().getVariableInfo(pOpr->arName);
+    if (unlikely(rawInfo->getTypeNum() != CARRAY))
+        throw badIntermediateCommand("executionManager::exeWriteArrOpr: "
+                                     "read array operation is performing"
+                                     " on a non-array variable");
+    auto arInfo = static_cast<VariableInfoArray *>(rawInfo);
+    auto intVec = prepareIndicies(pOpr->idxs);
+
+    auto readedVarInfo = arInfo->address(intVec);
+
+    // we get a single element from the array
+    if (readedVarInfo->getTypeNum() != CARRAY)
+    {
+        auto srcInfo = getVarMgr().getVariableInfo(pOpr->srcName);
+        if (srcInfo->getTypeNum() != readedVarInfo->getTypeNum())
+        {
+            auto temp = createConvertedVariable(
+                readedVarInfo->getTypeNum(), srcInfo->getTypeNum(),
+                srcInfo->getData()
+            );
+            readedVarInfo->updateData(temp.get());
+        }
+        else
+        {
+            readedVarInfo->updateData(srcInfo->getData());
+        }
+    }
+    // we are still in the middle of a multi-dimentional array.
+    // the write operation is invalid
+    else
+    {
+        throw badIntermediateCommand("executionManager::exeWriteArrOpr: "
+                                     "writing to an array variable");
+    }
 }
 
 void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
@@ -496,7 +597,8 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
 
         // prepare arguments
         std::vector<std::unique_ptr<uint8_t[]> > tmpVars;
-        std::unique_ptr<void *[]> pargs(new void*[pOpr->varVec.size()]);
+        std::unique_ptr<const void *[]> pargs(
+            new const void*[pOpr->varVec.size()]);
         for (int i = 0; i < pOpr->varVec.size(); ++i)
         {
             auto varType = getVarMgr().getVariableTypeNum(pOpr->varVec[i]);
@@ -727,7 +829,7 @@ void executionManager::exeLoopGuardOpr(const loopGuardOperation *pOpr)
 
     // exit the loop if condition is false
     auto data = getVarMgr().getVariableInfo(pOpr->testVar)->getData();
-    if (*reinterpret_cast<int *>(data) == 0)
+    if (*reinterpret_cast<const int *>(data) == 0)
     {
         nestedCmds.pop_back();
         nestedCmdIdxs.pop_back();
@@ -792,7 +894,7 @@ void executionManager::exeCondBlkOpr(const condBlkOperation *pOpr)
 {
     // enter the conditional block if the condition holds true
     auto data = getVarMgr().getVariableInfo(pOpr->testVar)->getData();
-    if (*reinterpret_cast<int*>(data) != 0)
+    if (*reinterpret_cast<const int*>(data) != 0)
     {
         nestedCmds.push_back(&(pOpr->cmdseq));
         nestedCmdIdxs.push_back(0);
@@ -803,6 +905,14 @@ void executionManager::exeCondBlkOpr(const condBlkOperation *pOpr)
 void executionManager::exeDeclVarOpr(const declVarOperation *pOpr)
 {
     getVarMgr().declareVariable(pOpr->type, pOpr->var, false);
+}
+
+void executionManager::exeDeclArrOpr(const declArrOperation *pOpr)
+{
+    auto intVec = prepareIndicies(pOpr->idxs);
+    getVarMgr().declareArrayVariable(
+        pOpr->type, pOpr->var, intVec, false
+    );
 }
 
 void executionManager::execute(const command &cmd)
@@ -862,6 +972,9 @@ void executionManager::execute(const command &cmd)
         break;
     case cmdType::declareVariable:
         exeDeclVarOpr(reinterpret_cast<const declVarOperation*>(cmd.opr));
+        break;
+    case cmdType::declareArray:
+        exeDeclArrOpr(reinterpret_cast<const declArrOperation*>(cmd.opr));
         break;
     default:
         throw unknownSwitchCase("executionManager::execute");

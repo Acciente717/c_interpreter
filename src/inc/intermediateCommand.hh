@@ -74,7 +74,8 @@ enum class cmdType
     branchBlock,
     normalBlock,
     conditionalBlock,
-    declareVariable
+    declareVariable,
+    declareArray
 };
 
 /**
@@ -324,6 +325,16 @@ struct declVarOperation
     VarName var;
 };
 
+/**
+ *  Declare a new array.
+ */
+struct declArrOperation
+{
+    TypeName type;
+    VarName var;
+    std::vector<VarName> idxs;
+};
+
 struct command
 {
     cmdType type;
@@ -363,6 +374,8 @@ struct command
                             std::unique_ptr<condBlkOperation> opr);
     inline explicit command(cmdType type,
                             std::unique_ptr<declVarOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<declArrOperation> opr);
     inline command() : type(cmdType::empty), opr(nullptr) {}
     ~command();
     command(command &&other);
@@ -592,6 +605,19 @@ command::command(cmdType _type, std::unique_ptr<declVarOperation> _opr)
     iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating declare variable operation!");
+
+    type = _type;
+    opr = _opr.release();
+}
+
+command::command(cmdType _type, std::unique_ptr<declArrOperation> _opr)
+{
+    iferr (_type != cmdType::declareArray)
+        throw cmdCreationError("Error: argument mismatch"
+                               " while creating declare array operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument"
+                               " while creating declare array operation!");
 
     type = _type;
     opr = _opr.release();

@@ -44,11 +44,11 @@ class unknownFieldName : public std::exception
     }
 };
 
-class unknownTypeNum : public std::exception
+class unknownTypeName : public std::exception
 {
     std::string msg;
  public:
-    explicit unknownTypeNum(const std::string &s)
+    explicit unknownTypeName(const std::string &s)
         : msg(s) {}
     const char *what() const noexcept override
     {
@@ -56,12 +56,12 @@ class unknownTypeNum : public std::exception
     }
 };
 
-class unknownTypeName : public std::exception
+class unknownTypeNum : public std::exception
 {
     std::string msg;
  public:
-    explicit unknownTypeName(const std::string &s)
-        : msg(s) {}
+    explicit unknownTypeNum(int num)
+        : msg(std::to_string(num)) {}
     const char *what() const noexcept override
     {
         return msg.c_str();

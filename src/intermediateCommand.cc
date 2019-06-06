@@ -62,6 +62,9 @@ void command::releaseMemory()
     case cmdType::declareVariable:
         delete reinterpret_cast<declVarOperation *>(opr);
         break;
+    case cmdType::declareArray:
+        delete reinterpret_cast<declArrOperation *>(opr);
+        break;
     case cmdType::empty:
         opr = nullptr;
         break;

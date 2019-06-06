@@ -170,6 +170,7 @@ ND_NON_EMPTY_PARAM_LIST     : ND_TYPE_NAME ND_IDENTIFIER
  /* A statement. */
 ND_STATEMENT                : ND_DECLARE_VARIABLE
                             | ND_INITIALIZE_VARIABLE
+                            | ND_DECLARE_ARRAY
                             | ND_ARITHMIC_OPERATION
                             | ND_CONTROL_COMMAND
                             | ND_BLOCK_STATEMENTS
@@ -352,6 +353,32 @@ ND_DECLARE_VARIABLE         : ND_TYPE_NAME ND_IDENTIFIER CINT_DELIM_SEMICOLON
                                                                         *reinterpret_cast<std::string *>($1.data),
                                                                         *reinterpret_cast<std::string *>
                                                                                                 ($2.data)}));
+                                }
+                            ;
+
+
+ /* Declare an array. */
+ND_DECLARE_ARRAY            : ND_TYPE_NAME ND_IDENTIFIER ND_INDEX_LIST CINT_DELIM_SEMICOLON
+                                {
+                                    cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareArray,
+                                                                        std::unique_ptr<cint::declArrOperation>
+                                                                        (new cint::declArrOperation{
+                                                                        *reinterpret_cast<std::string *>($1.data),
+                                                                        *reinterpret_cast<std::string *>
+                                                                                                ($2.data),
+                                                                        gSubscripts}));
+                                }
+                            ;
+
+ /* Index list. */
+ND_INDEX_LIST               : CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
+                                {
+                                    gSubscripts.clear();
+                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($2.data)));
+                                }
+                            | ND_INDEX_LIST CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
+                                {
+                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
                                 }
                             ;
 

@@ -252,6 +252,18 @@ void printCmd(const command &cmd, int indent)
         break;
         // end of `declareVariable`
 
+    case cmdType::declareArray:
+        cout << "declareArray: ["
+             << reinterpret_cast<declArrOperation *>(cmd.opr)->type
+             << "] "
+             << reinterpret_cast<declArrOperation *>(cmd.opr)->var;
+        for (const auto &j :
+                reinterpret_cast<declArrOperation *>(cmd.opr)->idxs)
+            cout << '[' << j << ']';
+        cout << endl;
+        break;
+        // end of `declareArray`
+
     default:
         cout << "unknown: " << endl;
     }

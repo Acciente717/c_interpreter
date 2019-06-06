@@ -27,7 +27,6 @@ class VariableInfoBase
 
  protected:
     inline VariableInfoBase(decltype(baseTypeNum) _baseTypeNum,
-                            decltype(baseTypeSize) _baseTypeSize,
                             decltype(data) _data,
                             decltype(isReference) _isReference,
                             decltype(isTemporary) _isTemporary) noexcept;
@@ -42,11 +41,50 @@ class VariableInfoBase
 
     virtual decltype(baseTypeNum) getTypeNum() const noexcept = 0;
     virtual decltype(baseTypeSize) getTypeSize() const noexcept = 0;
-    virtual const decltype(data) getData() const noexcept = 0;
-    virtual decltype(data) getMutableData() noexcept = 0;
+    virtual const void *getData() const noexcept = 0;
+    virtual decltype(data) getMutableData() = 0;
     virtual decltype(isReference) getIsReference() const noexcept = 0;
     virtual void updateData(const void *new_data) = 0;
     virtual void setReference(void *new_ref) = 0;
+    virtual const void *getReference() = 0;
+};
+
+class VariableInfoArray : public VariableInfoBase
+{
+ protected:
+    std::vector<int> dimSizes;
+    ssize_t shift;
+    int topLevelSize;
+    bool isLeaf;
+
+ public:
+    VariableInfoArray() = delete;
+    VariableInfoArray(const VariableInfoArray &other) = delete;
+    VariableInfoArray& operator=(const VariableInfoArray &other) = delete;
+    explicit VariableInfoArray(decltype(baseTypeNum) _baseTypeNum,
+                               decltype(data) _data,
+                               const decltype(dimSizes) &_dimSizes,
+                               decltype(topLevelSize) _topLevelSize,
+                               decltype(isReference) _isReference);
+    explicit VariableInfoArray(decltype(baseTypeNum) _baseTypeNum,
+                               decltype(data) _data,
+                               const decltype(dimSizes) &_shape,
+                               decltype(isReference) _isReference);
+    explicit VariableInfoArray(VariableInfoArray &&other) noexcept;
+    VariableInfoArray& operator=(VariableInfoArray &&other) noexcept;
+    ~VariableInfoArray() override;
+
+    decltype(baseTypeNum) getTypeNum() const noexcept override;
+    decltype(baseTypeSize) getTypeSize() const noexcept override;
+    const void *getData() const noexcept override;
+    decltype(data) getMutableData() override;
+    decltype(isReference) getIsReference() const noexcept override;
+    void updateData(const void *new_data) override;
+    void setReference(void *new_ref) override;
+    const void *getReference() override;
+
+    std::unique_ptr<VariableInfoArray>
+        address(const decltype(dimSizes) &indicies);
 };
 
 class VariableInfoSolid : public VariableInfoBase
@@ -56,7 +94,6 @@ class VariableInfoSolid : public VariableInfoBase
     VariableInfoSolid(const VariableInfoSolid &other) = delete;
     VariableInfoSolid& operator=(const VariableInfoSolid &other) = delete;
     explicit VariableInfoSolid(decltype(baseTypeNum) _baseTypeNum,
-                               decltype(baseTypeSize) _baseTypeSize,
                                decltype(data) _data,
                                decltype(isTemporary) _isTemporary) noexcept;
     explicit VariableInfoSolid(VariableInfoSolid &&other) noexcept;
@@ -65,11 +102,12 @@ class VariableInfoSolid : public VariableInfoBase
 
     decltype(baseTypeNum) getTypeNum() const noexcept override;
     decltype(baseTypeSize) getTypeSize() const noexcept override;
-    const decltype(data) getData() const noexcept override;
-    decltype(data) getMutableData() noexcept override;
+    const void *getData() const noexcept override;
+    decltype(data) getMutableData() override;
     decltype(isReference) getIsReference() const noexcept override;
     void updateData(const void *new_data) override;
     void setReference(void *new_ref) override;
+    const void *getReference() override;
 };
 
 using variableDictionary =
@@ -104,6 +142,13 @@ class VariableManager
                             const void *initData,
                             bool isTemporary);
     void assignVariable(const std::string &varName, const void *data);
+    void declareArrayVariable(const std::string &baseTypeName,
+                              const std::string &varName,
+                              const std::vector<int> &shape,
+                              bool isTemporary);
+    void moveInArrayVariable(
+        const std::string &varName,
+        std::unique_ptr<VariableInfoArray> newArrayVar);
     // const void *getVariableData(const std::string &varName);
     VariableInfoBase *getVariableInfo(const std::string &varName);
     int getVariableTypeNum(const std::string &varName);
@@ -123,7 +168,7 @@ VariableManager& getVarMgr();
 inline VariableManager::VariableManager()
 {
     pReturnValue = std::make_unique<VariableInfoSolid>(
-        CVOID, 1, new uint8_t[1], true
+        CVOID, new uint8_t[1], true
     );
     varStack.emplace_back();
     funcIndicatorStack.push_back(0);

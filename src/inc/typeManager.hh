@@ -20,6 +20,7 @@ enum basicTypesEnum
     CINT32,
     CFLOAT,
     CVOID,
+    CARRAY,
     basicTypesNum
 };
 
@@ -77,6 +78,7 @@ class typeManager
     typeInfo getTypeByNum(int _typeNum);
     std::string getTypenameByNum(int _typeNum);
     int getTypeNumByName(const std::string &_typeName);
+    unsigned getSizeByNum(int _typeNum);
 };
 
 typeManager& getTypeMgr();

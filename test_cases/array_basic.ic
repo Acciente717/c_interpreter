@@ -1,0 +1,54 @@
+void main()
+{
+    int ar1[1];
+    ar1[0] = 2333;
+    cputint(ar1[0]);
+    cputchar(10);
+
+    int ar2[10];
+    int cnt = 9;
+    while (cnt >= 0)
+    {
+        ar2[cnt] = cnt;
+        cnt = cnt - 1;
+    }
+    cnt = 9;
+    while (cnt >= 0)
+    {
+        cputint(ar2[cnt]);
+        cnt = cnt - 1;
+    }
+    cputchar(10);
+
+    int ar3[1][10];
+    cnt = 9;
+    while (cnt >= 0)
+    {
+        ar3[0][cnt] = cnt;
+        cnt = cnt - 1;
+    }
+    cnt = 9;
+    while (cnt >= 0)
+    {
+        cputint(ar3[0][cnt]);
+        cnt = cnt - 1;
+    }
+    cputchar(10);
+
+    int cnt2 = 9;
+    int ar4[10][10];
+    while (cnt2 >= 0)
+    {
+        cnt = 9;
+        while (cnt >= 0) { ar4[cnt2][cnt] = cnt2; cnt = cnt - 1; }
+        cnt2 = cnt2 - 1;
+    }
+    cnt2 = 9;
+    while (cnt2 >= 0)
+    {
+        cnt = 9;
+        while (cnt >= 0) { cputint(ar4[cnt2][cnt]); cnt = cnt - 1; }
+        cputchar(10);
+        cnt2 = cnt2 - 1;
+    }
+}
