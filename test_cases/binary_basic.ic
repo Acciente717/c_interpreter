@@ -17,20 +17,20 @@ void main()
     cputint(ival);
     cputchar(10);
 
-    float fval;
+    double fval;
     fval = 2.0;
-    cputfloat(fval);
+    cputdouble(fval);
     cputchar(10);
     fval = -2.0;
-    cputfloat(fval);
+    cputdouble(fval);
     cputchar(10);
     fval = -fval;
-    cputfloat(fval);
+    cputdouble(fval);
     cputchar(10);
     fval = !fval;
-    cputfloat(fval);
+    cputdouble(fval);
     cputchar(10);
     fval = !fval;
-    cputfloat(fval);
+    cputdouble(fval);
     cputchar(10);
 }

@@ -15,7 +15,7 @@ enum builtinFuncEnum
 {
     CPUTINT,
     CPUTCHAR,
-    CPUTFLOAT,
+    CPUTDOUBLE,
     BUILTIN_FUNC_NUM
 };
 

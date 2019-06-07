@@ -1,19 +1,19 @@
 void main()
 {
-    float val1;
-    float val2 = 0.5;
-    cputfloat(val2);
+    double val1;
+    double val2 = 0.5;
+    cputdouble(val2);
     cputchar(10);
-    float val3 = val2;
-    cputfloat(val3);
+    double val3 = val2;
+    cputdouble(val3);
     cputchar(10);
     val1 = 2.5;
-    cputfloat(val1);
+    cputdouble(val1);
     cputchar(10);
     val2 = val1;
-    cputfloat(val2);
+    cputdouble(val2);
     cputchar(10);
     val2 = val2;
-    cputfloat(val2);
+    cputdouble(val2);
     cputchar(10);
 }

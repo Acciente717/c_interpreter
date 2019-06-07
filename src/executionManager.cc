@@ -74,24 +74,24 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
             *reinterpret_cast<long*>(new_data.get())
                 = *reinterpret_cast<const long*>(data);
             break;
-        case CFLOAT:
+        case CDOUBLE:
             *reinterpret_cast<long*>(new_data.get())
-                = *reinterpret_cast<const float*>(data);
+                = *reinterpret_cast<const double*>(data);
             break;
         default:
             throw unknownSwitchCase("createConvertedVariable");
         }
         break;
-    case CFLOAT:
+    case CDOUBLE:
         switch (srcTypeNum)
         {
         case CLONG:
-            *reinterpret_cast<float*>(new_data.get())
+            *reinterpret_cast<double*>(new_data.get())
                 = *reinterpret_cast<const long*>(data);
             break;
-        case CFLOAT:
-            *reinterpret_cast<float*>(new_data.get())
-                = *reinterpret_cast<const float*>(data);
+        case CDOUBLE:
+            *reinterpret_cast<double*>(new_data.get())
+                = *reinterpret_cast<const double*>(data);
             break;
         default:
             throw unknownSwitchCase("createConvertedVariable");
@@ -101,7 +101,7 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
         switch (srcTypeNum)
         {
         case CVOID:
-            *reinterpret_cast<float*>(new_data.get())
+            *reinterpret_cast<double*>(new_data.get())
                 = *reinterpret_cast<const long*>(data);
             break;
         default:
@@ -167,12 +167,12 @@ inline void longArithmic(ternaryOprType oprNum, void *px,
     }
 }
 
-inline void floatArithmic(ternaryOprType oprNum, void *px,
+inline void doubleArithmic(ternaryOprType oprNum, void *px,
                           const void *py, const void *pz)
 {
-    auto *pFloatX = reinterpret_cast<float*>(px);
-    auto *pFloatY = reinterpret_cast<const float*>(py);
-    auto *pFloatZ = reinterpret_cast<const float*>(pz);
+    auto *pFloatX = reinterpret_cast<double*>(px);
+    auto *pFloatY = reinterpret_cast<const double*>(py);
+    auto *pFloatZ = reinterpret_cast<const double*>(pz);
 
     switch (oprNum)
     {
@@ -216,7 +216,7 @@ inline void floatArithmic(ternaryOprType oprNum, void *px,
         *pFloatX = static_cast<long>(*pFloatY || *pFloatZ);
         break;
     default:
-        throw unknownSwitchCase("floatArithmic");
+        throw unknownSwitchCase("doubleArithmic");
     }
 }
 
@@ -302,9 +302,9 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
                 xInfo->updateData(&value);
             }
             break;
-        case CFLOAT:
+        case CDOUBLE:
             {
-                auto value = std::stof(pOpr->vars[1]);
+                auto value = std::stod(pOpr->vars[1]);
                 xInfo->updateData(&value);
             }
             break;
@@ -331,9 +331,9 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
             *reinterpret_cast<long *>(xInfo->getMutableData()) =
                 !*reinterpret_cast<const long *>(yInfo->getData());
             break;
-        case CFLOAT:
+        case CDOUBLE:
             *reinterpret_cast<long *>(xInfo->getMutableData()) =
-                !*reinterpret_cast<const float *>(yInfo->getData());
+                !*reinterpret_cast<const double *>(yInfo->getData());
             break;
         default:
             throw unknownSwitchCase("executionManager::exeBinaryOpr");
@@ -358,9 +358,9 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
             *reinterpret_cast<long *>(xInfo->getMutableData()) =
                 -*reinterpret_cast<const long *>(yInfo->getData());
             break;
-        case CFLOAT:
-            *reinterpret_cast<float *>(xInfo->getMutableData()) =
-                -*reinterpret_cast<const float *>(yInfo->getData());
+        case CDOUBLE:
+            *reinterpret_cast<double *>(xInfo->getMutableData()) =
+                -*reinterpret_cast<const double *>(yInfo->getData());
             break;
         default:
             throw unknownSwitchCase("executionManager::exeBinaryOpr");
@@ -472,8 +472,8 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     case CLONG:
         longArithmic(pOpr->oprType, tgtPtr, yPtr, zPtr);
         break;
-    case CFLOAT:
-        floatArithmic(pOpr->oprType, tgtPtr, yPtr, zPtr);
+    case CDOUBLE:
+        doubleArithmic(pOpr->oprType, tgtPtr, yPtr, zPtr);
         break;
     default:
         throw unknownSwitchCase("executionManager::exeBinaryOpr");

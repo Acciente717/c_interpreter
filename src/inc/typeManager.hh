@@ -18,7 +18,7 @@ namespace cint
 enum basicTypesEnum
 {
     CLONG,
-    CFLOAT,
+    CDOUBLE,
     CVOID,
     CARRAY,
     basicTypesNum

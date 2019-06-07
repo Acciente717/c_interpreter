@@ -43,7 +43,7 @@ std::unordered_set<std::string> *gpExistTmpVar;
 
 std::string gLexIdentifier;
 std::string gLexInteger;
-std::string gLexFloat;
+std::string gLexDouble;
 std::vector<std::string> gSubscripts;
 
 extern "C"
@@ -60,7 +60,7 @@ extern "C"
 %}
 
  /* Reserved Type Keywords */
-%token CINT_TYPE_LONG CINT_TYPE_FLOAT CINT_TYPE_VOID
+%token CINT_TYPE_LONG CINT_TYPE_DOUBLE CINT_TYPE_VOID
 
  /* Reserved Control Keywords */
 %token CINT_CTRL_IF CINT_CTRL_ELSE CINT_CTRL_WHILE CINT_CTRL_BREAK 
@@ -85,8 +85,8 @@ extern "C"
  /* Integer */
 %token CINT_INTEGER
 
- /* Float */
-%token CINT_FLOAT
+ /* Double */
+%token CINT_DOUBLE
 
 %start start
 
@@ -410,11 +410,11 @@ ND_TYPE_NAME                : CINT_TYPE_LONG
                                     $$ = yaccInfo(yaccInfo::infoType::typeName,
                                                   "long");
                                 }
-                            | CINT_TYPE_FLOAT
+                            | CINT_TYPE_DOUBLE
                                 {
                                     using namespace cint;
                                     $$ = yaccInfo(yaccInfo::infoType::typeName,
-                                                  "float");
+                                                  "double");
                                 }
                             | CINT_TYPE_VOID
                                 {
@@ -717,7 +717,7 @@ ND_STANDALONE_LITERAL       : CINT_INTEGER
                                     $$ = cint::yaccInfo(cint::yaccInfo::infoType::varName,
                                                   std::move(tmpVar));
                                 }
-                            | CINT_FLOAT
+                            | CINT_DOUBLE
                                 {
                                     std::string tmpVar;
                                     while (cint::isTempNameExist(tmpVar = cint::genRandomStr(TEMP_NAME_LEN, true),
@@ -725,12 +725,12 @@ ND_STANDALONE_LITERAL       : CINT_INTEGER
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareVariable,
                                                                         std::unique_ptr<cint::declVarOperation>
                                                                         (new cint::declVarOperation{
-                                                                        "float", tmpVar}));
+                                                                        "double", tmpVar}));
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::binaryOperation,
                                                                         std::unique_ptr<cint::binaryOperation>
                                                                         (new cint::binaryOperation{
                                                                         cint::binaryOprType::assignLiteral,
-                                                                        {tmpVar, gLexFloat}}));
+                                                                        {tmpVar, gLexDouble}}));
                                     $$ = cint::yaccInfo(cint::yaccInfo::infoType::varName,
                                                   std::move(tmpVar));
                                 }

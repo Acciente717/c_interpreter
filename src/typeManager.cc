@@ -10,14 +10,14 @@ namespace cint
 
 const char *basicTypesName[] = {
     "long",
-    "float",
+    "double",
     "void",
     ""
 };
 
 const long basicTypesSize[] = {
     8,  // long
-    4,  // float
+    8,  // double
     1,  // void
     1   // array
 };

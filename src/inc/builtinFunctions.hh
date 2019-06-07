@@ -18,9 +18,9 @@ inline void cputint(T val)
 }
 
 template <typename T>
-inline void cputfloat(T val)
+inline void cputdouble(T val)
 {
-    static_assert(std::is_floating_point<T>::value, "cputfloat must be called "
+    static_assert(std::is_floating_point<T>::value, "cputdouble must be called "
                                             "with an floating point argument!");
     std::cout << std::to_string(val);
 }

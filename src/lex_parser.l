@@ -3,7 +3,7 @@
 
  /* Reserved Type Keywords */
 long      { return CINT_TYPE_LONG; }
-float   { return CINT_TYPE_FLOAT; }
+double   { return CINT_TYPE_DOUBLE; }
 void     { return CINT_TYPE_VOID; }
 
  /* Reserved Control Keywords */
@@ -57,10 +57,10 @@ return   { return CINT_CTRL_RETURN; }
     return CINT_INTEGER;
 }
 
- /* Float */
+ /* Double */
 [0-9]+\.[0-9]+ {
-    gLexFloat = yytext;
-    return CINT_FLOAT;
+    gLexDouble = yytext;
+    return CINT_DOUBLE;
 }
 
  /* Blackhole for Whilespaces */
