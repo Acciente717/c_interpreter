@@ -1,11 +1,11 @@
-void print_thisis(int x)
+void print_thisis(long x)
 {
     cputchar(116); cputchar(104); cputchar(105);  cputchar(115);
     cputchar(32); cputchar(105);  cputchar(115); cputchar(58);
     cputchar(32); cputint(x); cputchar(10);
 }
 
-void elif_nine_to_zero(int x)
+void elif_nine_to_zero(long x)
 {
     if (x == 0) { print_thisis(0); }
     else if (x == 1) { print_thisis(1); }
@@ -21,7 +21,7 @@ void elif_nine_to_zero(int x)
 
 void main()
 {
-    int x = 0; int y = 1;
+    long x = 0; long y = 1;
 
     if (x % 2) { cputint(0); cputchar(10); }
     if (y % 2) { cputint(1); cputchar(10); }
@@ -101,7 +101,7 @@ void main()
     if (!x && !y || x && !y) { cputint(0); cputchar(10); }
     if (!x && !y || !x && !y) { cputint(0); cputchar(10); }
 
-    int cnt = 9;
+    long cnt = 9;
     while (cnt >= 0)
     {
         elif_nine_to_zero(cnt);

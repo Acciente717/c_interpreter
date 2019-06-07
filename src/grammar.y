@@ -34,7 +34,7 @@ $$ = cint::yaccInfo(yaccInfo::infoType::varName,\
 
 cint::basicTypesEnum gActiveTypeNum;
 
-std::vector<int> gFuncParamTypes;
+std::vector<long> gFuncParamTypes;
 std::vector<std::string> gFuncParamNames;
 std::vector<std::string> gFuncArgNames;
 
@@ -60,7 +60,7 @@ extern "C"
 %}
 
  /* Reserved Type Keywords */
-%token CINT_TYPE_INT CINT_TYPE_FLOAT CINT_TYPE_VOID
+%token CINT_TYPE_LONG CINT_TYPE_FLOAT CINT_TYPE_VOID
 
  /* Reserved Control Keywords */
 %token CINT_CTRL_IF CINT_CTRL_ELSE CINT_CTRL_WHILE CINT_CTRL_BREAK 
@@ -404,11 +404,11 @@ ND_INITIALIZE_VARIABLE      : ND_TYPE_NAME ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPR
 
 
  /* All type names. */
-ND_TYPE_NAME                : CINT_TYPE_INT
+ND_TYPE_NAME                : CINT_TYPE_LONG
                                 {
                                     using namespace cint;
                                     $$ = yaccInfo(yaccInfo::infoType::typeName,
-                                                  "int");
+                                                  "long");
                                 }
                             | CINT_TYPE_FLOAT
                                 {
@@ -708,7 +708,7 @@ ND_STANDALONE_LITERAL       : CINT_INTEGER
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::declareVariable,
                                                                         std::unique_ptr<cint::declVarOperation>
                                                                         (new cint::declVarOperation{
-                                                                        "int", tmpVar}));
+                                                                        "long", tmpVar}));
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::binaryOperation,
                                                                         std::unique_ptr<cint::binaryOperation>
                                                                         (new cint::binaryOperation{
@@ -770,7 +770,7 @@ int yywrap()
     {
         std::cout << "function: " << i.first;
         std::cout << '(';
-        for (int j = 0; j < i.second.paramNames.size(); ++j)
+        for (long j = 0; j < i.second.paramNames.size(); ++j)
         {
             if (j != 0) std::cout << ", ";
             std::cout << cint::getTypeMgr().getTypenameByNum(i.second.paramTypeNums[j]);

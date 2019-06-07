@@ -38,13 +38,13 @@ inline bool isTempNameExist(const std::string &name,
  *  Recursively print the commands stored in the `seq`.
  *  `indent` controls how many white spaces appear before the commands.
  */
-void printCmdSeq(const cmdSeq &seq, int indent = 0);
+void printCmdSeq(const cmdSeq &seq, long indent = 0);
 
 /**
  *  Print a single command.
  *  `indent` controls how many white spaces appear before the commands.
  */
-void printCmd(const command &cmd, int indent);
+void printCmd(const command &cmd, long indent);
 
 }  // namespace cint
 

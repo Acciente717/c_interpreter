@@ -1,4 +1,4 @@
-void print_thisis(int x)
+void print_thisis(long x)
 {
     cputchar(116); cputchar(104); cputchar(105);  cputchar(115);
     cputchar(32); cputchar(105);  cputchar(115); cputchar(58);
@@ -7,12 +7,12 @@ void print_thisis(int x)
 
 void main()
 {
-    int cnt = 5;
+    long cnt = 5;
 
     while (cnt >= 0) { print_thisis(cnt); cnt = cnt - 1; }
     cputchar(10);
     
-    int cnt2 = 2;
+    long cnt2 = 2;
     while (cnt2 >= 0)
     {
         cnt = 3;

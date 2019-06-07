@@ -19,7 +19,7 @@ namespace cint
 class VariableInfoBase
 {
  protected:
-    int baseTypeNum;
+    long baseTypeNum;
     unsigned baseTypeSize;
     void *data;
     bool isReference;
@@ -52,9 +52,9 @@ class VariableInfoBase
 class VariableInfoArray : public VariableInfoBase
 {
  protected:
-    std::vector<int> dimSizes;
+    std::vector<long> dimSizes;
     ssize_t shift;
-    int topLevelSize;
+    long topLevelSize;
     bool isLeaf;
 
  public:
@@ -133,6 +133,7 @@ class VariableManager
     ~VariableManager() noexcept;
 
     inline void newScope(bool isFunction = false);
+    inline void setScopeBoundary();
     void popScope();
     void declareVariable(const std::string &typeName,
                          const std::string &varName,
@@ -144,18 +145,18 @@ class VariableManager
     void assignVariable(const std::string &varName, const void *data);
     void declareArrayVariable(const std::string &baseTypeName,
                               const std::string &varName,
-                              const std::vector<int> &shape,
+                              const std::vector<long> &shape,
                               bool isTemporary);
     void moveInArrayVariable(
         const std::string &varName,
         std::unique_ptr<VariableInfoArray> newArrayVar);
     // const void *getVariableData(const std::string &varName);
     VariableInfoBase *getVariableInfo(const std::string &varName);
-    int getVariableTypeNum(const std::string &varName);
+    long getVariableTypeNum(const std::string &varName);
     void updateReturnValue(const std::string &typeName,
                            const void *updateData);
     const void *getReturnValueData();
-    int getReturnValueTypeNum();
+    long getReturnValueTypeNum();
     void setReturnValueToVoid();
 };
 
@@ -187,6 +188,11 @@ inline void VariableManager::newScope(bool isFunction)
 {
     varStack.emplace_back();
     funcIndicatorStack.push_back(static_cast<uint8_t>(isFunction));
+}
+
+inline void VariableManager::setScopeBoundary()
+{
+    funcIndicatorStack.back() = 1;
 }
 
 }  // namespace cint

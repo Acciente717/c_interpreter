@@ -17,7 +17,7 @@ namespace cint
 
 enum basicTypesEnum
 {
-    CINT32,
+    CLONG,
     CFLOAT,
     CVOID,
     CARRAY,
@@ -26,19 +26,19 @@ enum basicTypesEnum
 
 extern const char *basicTypesName[];
 
-extern const int basicTypesSize[];
+extern const long basicTypesSize[];
 
 struct fieldInfo
 {
     unsigned offset;
     unsigned len;
-    int typeNum;
+    long typeNum;
     std::string name;
 };
 
 class typeInfo
 {
-    int typeNum;                      // number of the type
+    long typeNum;                      // number of the type
     unsigned typeSize;                // size of the type
     unsigned ptrLevel;                // level of pointer
     bool basic;                       // whether the size is one of the basics
@@ -64,21 +64,21 @@ class typeInfo
 
 class typeManager
 {
-    std::unordered_map<int, typeInfo> types;
-    std::unordered_map<std::string, int> name2num;
+    std::unordered_map<long, typeInfo> types;
+    std::unordered_map<std::string, long> name2num;
 
     inline void initBuiltinTypes();
  public:
     inline typeManager();
-    static int chooseSuperType(int lhs, int rhs)
+    static long chooseSuperType(long lhs, long rhs)
     {
         return lhs > rhs ? lhs : rhs;
     }
 
-    typeInfo getTypeByNum(int _typeNum);
-    std::string getTypenameByNum(int _typeNum);
-    int getTypeNumByName(const std::string &_typeName);
-    unsigned getSizeByNum(int _typeNum);
+    typeInfo getTypeByNum(long _typeNum);
+    std::string getTypenameByNum(long _typeNum);
+    long getTypeNumByName(const std::string &_typeName);
+    unsigned getSizeByNum(long _typeNum);
 };
 
 typeManager& getTypeMgr();
@@ -143,7 +143,7 @@ inline typeManager::typeManager()
 
 inline void typeManager::initBuiltinTypes()
 {
-    for (int i = 0; i < basicTypesNum; ++i)
+    for (long i = 0; i < basicTypesNum; ++i)
     {
         types.emplace(i, typeInfo(i, basicTypesSize[i],
                             basicTypesName[i],

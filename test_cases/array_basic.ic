@@ -1,12 +1,12 @@
 void main()
 {
-    int ar1[1];
+    long ar1[1];
     ar1[0] = 2333;
     cputint(ar1[0]);
     cputchar(10);
 
-    int ar2[10];
-    int cnt = 9;
+    long ar2[10];
+    long cnt = 9;
     while (cnt >= 0)
     {
         ar2[cnt] = cnt;
@@ -20,7 +20,7 @@ void main()
     }
     cputchar(10);
 
-    int ar3[1][10];
+    long ar3[1][10];
     cnt = 9;
     while (cnt >= 0)
     {
@@ -35,8 +35,8 @@ void main()
     }
     cputchar(10);
 
-    int cnt2 = 9;
-    int ar4[10][10];
+    long cnt2 = 9;
+    long ar4[10][10];
     while (cnt2 >= 0)
     {
         cnt = 9;

@@ -60,7 +60,7 @@ class unknownTypeNum : public std::exception
 {
     std::string msg;
  public:
-    explicit unknownTypeNum(int num)
+    explicit unknownTypeNum(long num)
         : msg(std::to_string(num)) {}
     const char *what() const noexcept override
     {

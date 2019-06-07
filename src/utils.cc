@@ -18,7 +18,7 @@ std::string genRandomStr(const size_t len, const bool sharpHead)
     iferr (len == 0)
         return std::string();
 
-    int i;
+    long i;
     std::string str(len, 0);
     if (sharpHead)
         str[0] = '#', i = 1;
@@ -33,7 +33,7 @@ std::string genRandomStr(const size_t len, const bool sharpHead)
     return str;
 }
 
-void printCmd(const command &cmd, int indent)
+void printCmd(const command &cmd, long indent)
 {
     using cint::cmdType;
     using cint::ternaryOprType;
@@ -219,7 +219,7 @@ void printCmd(const command &cmd, int indent)
         cout << "functionCall: "
              << reinterpret_cast<funcCallOperation *>(cmd.opr)->func
              << '(';
-        for (int j = 0;
+        for (long j = 0;
              j < reinterpret_cast<funcCallOperation *>(cmd.opr)->varVec.size();
              ++j)
         {
@@ -269,7 +269,7 @@ void printCmd(const command &cmd, int indent)
     }
 }
 
-void printCmdSeq(const cmdSeq &seq, int indent)
+void printCmdSeq(const cmdSeq &seq, long indent)
 {
     for (auto &i : seq.cmds)
         printCmd(i, indent);

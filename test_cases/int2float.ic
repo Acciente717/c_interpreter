@@ -6,7 +6,7 @@ void main()
     fval1 = 2;
     cputfloat(fval1);
     cputchar(10);
-    int ival = 3;
+    long ival = 3;
     float fval2 = ival;
     cputfloat(fval2);
     cputchar(10);

@@ -9,14 +9,14 @@ namespace cint
 {
 
 const char *basicTypesName[] = {
-    "int",
+    "long",
     "float",
     "void",
     ""
 };
 
-const int basicTypesSize[] = {
-    4,  // int
+const long basicTypesSize[] = {
+    8,  // long
     4,  // float
     1,  // void
     1   // array
@@ -41,7 +41,7 @@ fieldInfo typeInfo::getFieldByName(const std::string &queryName) const
 }
 
 
-typeInfo typeManager::getTypeByNum(int _typeNum)
+typeInfo typeManager::getTypeByNum(long _typeNum)
 {
     try
     {
@@ -54,7 +54,7 @@ typeInfo typeManager::getTypeByNum(int _typeNum)
 }
 
 
-std::string typeManager::getTypenameByNum(int _typeNum)
+std::string typeManager::getTypenameByNum(long _typeNum)
 {
     try
     {
@@ -67,7 +67,7 @@ std::string typeManager::getTypenameByNum(int _typeNum)
 }
 
 
-int typeManager::getTypeNumByName(const std::string &_typeName)
+long typeManager::getTypeNumByName(const std::string &_typeName)
 {
     try
     {
@@ -79,7 +79,7 @@ int typeManager::getTypeNumByName(const std::string &_typeName)
     }
 }
 
-unsigned typeManager::getSizeByNum(int _typeNum)
+unsigned typeManager::getSizeByNum(long _typeNum)
 {
     try
     {

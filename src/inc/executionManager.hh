@@ -12,8 +12,8 @@ namespace cint
 class executionManager
 {
     std::vector<const cmdSeq *> nestedCmds;
-    std::vector<int> nestedCmdIdxs;
-    std::vector<int> nestedRetTypes;
+    std::vector<long> nestedCmdIdxs;
+    std::vector<long> nestedRetTypes;
 
     void exeUnaryOpr(const unaryOperation *pOpr);
     void exeBinaryOpr(const binaryOperation *pOpr);

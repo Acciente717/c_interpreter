@@ -9,14 +9,14 @@
 namespace cint
 {
 
-static std::vector<int> decideTypeConversionTernary(
+static std::vector<long> decideTypeConversionTernary(
     const ternaryOperation *pOpr
 )
 {
     auto xType = getVarMgr().getVariableTypeNum(pOpr->vars[0]);
     auto yType = getVarMgr().getVariableTypeNum(pOpr->vars[1]);
     auto zType = getVarMgr().getVariableTypeNum(pOpr->vars[2]);
-    auto res = std::vector<int>(3);
+    auto res = std::vector<long>(3);
 
     switch (pOpr->oprType)
     {
@@ -59,7 +59,7 @@ static std::vector<int> decideTypeConversionTernary(
 }
 
 static std::unique_ptr<uint8_t[]> createConvertedVariable(
-    int tgtTypeNum, int srcTypeNum, const void *data
+    long tgtTypeNum, long srcTypeNum, const void *data
 )
 {
     std::unique_ptr<uint8_t[]>
@@ -67,15 +67,15 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
 
     switch (tgtTypeNum)
     {
-    case CINT32:
+    case CLONG:
         switch (srcTypeNum)
         {
-        case CINT32:
-            *reinterpret_cast<int32_t*>(new_data.get())
-                = *reinterpret_cast<const int32_t*>(data);
+        case CLONG:
+            *reinterpret_cast<long*>(new_data.get())
+                = *reinterpret_cast<const long*>(data);
             break;
         case CFLOAT:
-            *reinterpret_cast<int32_t*>(new_data.get())
+            *reinterpret_cast<long*>(new_data.get())
                 = *reinterpret_cast<const float*>(data);
             break;
         default:
@@ -85,9 +85,9 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
     case CFLOAT:
         switch (srcTypeNum)
         {
-        case CINT32:
+        case CLONG:
             *reinterpret_cast<float*>(new_data.get())
-                = *reinterpret_cast<const int32_t*>(data);
+                = *reinterpret_cast<const long*>(data);
             break;
         case CFLOAT:
             *reinterpret_cast<float*>(new_data.get())
@@ -102,7 +102,7 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
         {
         case CVOID:
             *reinterpret_cast<float*>(new_data.get())
-                = *reinterpret_cast<const int32_t*>(data);
+                = *reinterpret_cast<const long*>(data);
             break;
         default:
             throw unknownSwitchCase("createConvertedVariable");
@@ -114,12 +114,12 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
     return new_data;
 }
 
-inline void int32Arithmic(ternaryOprType oprNum, void *px,
+inline void longArithmic(ternaryOprType oprNum, void *px,
                           const void *py, const void *pz)
 {
-    auto *pIntX = reinterpret_cast<int32_t*>(px);
-    auto *pIntY = reinterpret_cast<const int32_t*>(py);
-    auto *pIntZ = reinterpret_cast<const int32_t*>(pz);
+    auto *pIntX = reinterpret_cast<long*>(px);
+    auto *pIntY = reinterpret_cast<const long*>(py);
+    auto *pIntZ = reinterpret_cast<const long*>(pz);
 
     switch (oprNum)
     {
@@ -139,31 +139,31 @@ inline void int32Arithmic(ternaryOprType oprNum, void *px,
         *pIntX = *pIntY % *pIntZ;
         break;
     case ternaryOprType::assignLess:
-        *pIntX = static_cast<int32_t>(*pIntY < *pIntZ);
+        *pIntX = static_cast<long>(*pIntY < *pIntZ);
         break;
     case ternaryOprType::assignLessEqual:
-        *pIntX = static_cast<int32_t>(*pIntY <= *pIntZ);
+        *pIntX = static_cast<long>(*pIntY <= *pIntZ);
         break;
     case ternaryOprType::assignGreater:
-        *pIntX = static_cast<int32_t>(*pIntY > *pIntZ);
+        *pIntX = static_cast<long>(*pIntY > *pIntZ);
         break;
     case ternaryOprType::assignGreaterEqual:
-        *pIntX = static_cast<int32_t>(*pIntY >= *pIntZ);
+        *pIntX = static_cast<long>(*pIntY >= *pIntZ);
         break;
     case ternaryOprType::assignEqual:
-        *pIntX = static_cast<int32_t>(*pIntY == *pIntZ);
+        *pIntX = static_cast<long>(*pIntY == *pIntZ);
         break;
     case ternaryOprType::assignNotEqual:
-        *pIntX = static_cast<int32_t>(*pIntY != *pIntZ);
+        *pIntX = static_cast<long>(*pIntY != *pIntZ);
         break;
     case ternaryOprType::assignLogicAnd:
-        *pIntX = static_cast<int32_t>(*pIntY && *pIntZ);
+        *pIntX = static_cast<long>(*pIntY && *pIntZ);
         break;
     case ternaryOprType::assignLogicOr:
-        *pIntX = static_cast<int32_t>(*pIntY || *pIntZ);
+        *pIntX = static_cast<long>(*pIntY || *pIntZ);
         break;
     default:
-        throw unknownSwitchCase("int32Arithmic");
+        throw unknownSwitchCase("longArithmic");
     }
 }
 
@@ -192,44 +192,44 @@ inline void floatArithmic(ternaryOprType oprNum, void *px,
         throw unsupportedArithmic("cannot apply moduolo to floats");
         break;
     case ternaryOprType::assignLess:
-        *pFloatX = static_cast<int32_t>(*pFloatY < *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY < *pFloatZ);
         break;
     case ternaryOprType::assignLessEqual:
-        *pFloatX = static_cast<int32_t>(*pFloatY <= *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY <= *pFloatZ);
         break;
     case ternaryOprType::assignGreater:
-        *pFloatX = static_cast<int32_t>(*pFloatY > *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY > *pFloatZ);
         break;
     case ternaryOprType::assignGreaterEqual:
-        *pFloatX = static_cast<int32_t>(*pFloatY >= *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY >= *pFloatZ);
         break;
     case ternaryOprType::assignEqual:
-        *pFloatX = static_cast<int32_t>(*pFloatY == *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY == *pFloatZ);
         break;
     case ternaryOprType::assignNotEqual:
-        *pFloatX = static_cast<int32_t>(*pFloatY != *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY != *pFloatZ);
         break;
     case ternaryOprType::assignLogicAnd:
-        *pFloatX = static_cast<int32_t>(*pFloatY && *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY && *pFloatZ);
         break;
     case ternaryOprType::assignLogicOr:
-        *pFloatX = static_cast<int32_t>(*pFloatY || *pFloatZ);
+        *pFloatX = static_cast<long>(*pFloatY || *pFloatZ);
         break;
     default:
         throw unknownSwitchCase("floatArithmic");
     }
 }
 
-std::vector<int> prepareIndicies(const std::vector<std::string> &charIndicies)
+std::vector<long> prepareIndicies(const std::vector<std::string> &charIndicies)
 {
-    std::vector<int> res;
+    std::vector<long> res;
     for (const auto &i : charIndicies)
     {
         auto info = getVarMgr().getVariableInfo(i);
-        if (unlikely(info->getTypeNum() != CINT32))
+        if (unlikely(info->getTypeNum() != CLONG))
             throw badIntermediateCommand("prepareIndicies: indicies all are"
-                                         " not in type `int`");
-        res.push_back(*reinterpret_cast<const int*>(info->getData()));
+                                         " not in type `long`");
+        res.push_back(*reinterpret_cast<const long*>(info->getData()));
     }
     return res;
 }
@@ -296,9 +296,9 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
         xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
         switch (xInfo->getTypeNum())
         {
-        case CINT32:
+        case CLONG:
             {
-                auto value = std::stoi(pOpr->vars[1]);
+                auto value = std::stol(pOpr->vars[1]);
                 xInfo->updateData(&value);
             }
             break;
@@ -319,7 +319,7 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
         if (pOpr->vars[0][0] == '#')
         {
             getVarMgr().declareVariable(
-                getTypeMgr().getTypenameByNum(CINT32),
+                getTypeMgr().getTypenameByNum(CLONG),
                 pOpr->vars[0], true);
         }
 
@@ -327,12 +327,12 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
         yInfo = getVarMgr().getVariableInfo(pOpr->vars[1]);
         switch (yInfo->getTypeNum())
         {
-        case CINT32:
-            *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
-                !*reinterpret_cast<const int32_t *>(yInfo->getData());
+        case CLONG:
+            *reinterpret_cast<long *>(xInfo->getMutableData()) =
+                !*reinterpret_cast<const long *>(yInfo->getData());
             break;
         case CFLOAT:
-            *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
+            *reinterpret_cast<long *>(xInfo->getMutableData()) =
                 !*reinterpret_cast<const float *>(yInfo->getData());
             break;
         default:
@@ -354,9 +354,9 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
 
         switch (yInfo->getTypeNum())
         {
-        case CINT32:
-            *reinterpret_cast<int32_t *>(xInfo->getMutableData()) =
-                -*reinterpret_cast<const int32_t *>(yInfo->getData());
+        case CLONG:
+            *reinterpret_cast<long *>(xInfo->getMutableData()) =
+                -*reinterpret_cast<const long *>(yInfo->getData());
             break;
         case CFLOAT:
             *reinterpret_cast<float *>(xInfo->getMutableData()) =
@@ -378,7 +378,7 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     void *tgtPtr;
 
     std::unique_ptr<uint8_t[]> xSmart, ySmart, zSmart;
-    int superType;
+    long superType;
 
     yInfo = getVarMgr().getVariableInfo(pOpr->vars[1]);
     zInfo = getVarMgr().getVariableInfo(pOpr->vars[2]);
@@ -423,7 +423,7 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     // If x has different types from (y OP z), create a temporary variable
     // for x. For arithmic operations, create a temporaty variable with
     // the same type as superType. For logical operations, create a variable
-    // with the time int32_t.
+    // with the time long.
     switch (pOpr->oprType)
     {
     // arithmic operations
@@ -452,9 +452,9 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     case ternaryOprType::assignNotEqual:
     case ternaryOprType::assignLogicAnd:
     case ternaryOprType::assignLogicOr:
-        if (xInfo->getTypeNum() != CINT32)
+        if (xInfo->getTypeNum() != CLONG)
         {
-            xSmart.reset(new uint8_t[basicTypesSize[CINT32]]);
+            xSmart.reset(new uint8_t[basicTypesSize[CLONG]]);
             tgtPtr = xSmart.get();
         }
         else
@@ -469,8 +469,8 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     // dispatch operation to specific functions according to data types
     switch (superType)
     {
-    case CINT32:
-        int32Arithmic(pOpr->oprType, tgtPtr, yPtr, zPtr);
+    case CLONG:
+        longArithmic(pOpr->oprType, tgtPtr, yPtr, zPtr);
         break;
     case CFLOAT:
         floatArithmic(pOpr->oprType, tgtPtr, yPtr, zPtr);
@@ -599,7 +599,7 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
         std::vector<std::unique_ptr<uint8_t[]> > tmpVars;
         std::unique_ptr<const void *[]> pargs(
             new const void*[pOpr->varVec.size()]);
-        for (int i = 0; i < pOpr->varVec.size(); ++i)
+        for (long i = 0; i < pOpr->varVec.size(); ++i)
         {
             auto varType = getVarMgr().getVariableTypeNum(pOpr->varVec[i]);
             auto paramType = pBuiltin->paramTypeNums[i];
@@ -662,6 +662,7 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             );
         }
     }
+    getVarMgr().setScopeBoundary();
 
     // set return variable type
     nestedRetTypes.push_back(pFunc->retType);
@@ -689,7 +690,7 @@ void executionManager::exeFuncRetVoidOpr(const funcRetVoidOperation *pOpr)
     // if we are exiting the outermost function
     if (idx == 0)
     {
-        for (int i = nestedCmds.size() - 1; i >= 0; --i)
+        for (long i = nestedCmds.size() - 1; i >= 0; --i)
             getVarMgr().popScope();
         nestedCmds.clear();
         nestedCmdIdxs.clear();
@@ -697,7 +698,7 @@ void executionManager::exeFuncRetVoidOpr(const funcRetVoidOperation *pOpr)
     }
 
     // update variable scope
-    for (int i = nestedCmds.size() - 1; i >= idx; --i)
+    for (long i = nestedCmds.size() - 1; i >= idx; --i)
         getVarMgr().popScope();
 
     // jump back to previous function
@@ -737,7 +738,7 @@ void executionManager::exeFuncRetValOpr(const funcRetValOperation *pOpr)
     // if we are exiting the outermost function
     if (idx == 0)
     {
-        for (int i = nestedCmds.size() - 1; i >= 0; --i)
+        for (long i = nestedCmds.size() - 1; i >= 0; --i)
             getVarMgr().popScope();
         nestedCmds.clear();
         nestedCmdIdxs.clear();
@@ -745,7 +746,7 @@ void executionManager::exeFuncRetValOpr(const funcRetValOperation *pOpr)
     }
 
     // update variable scope
-    for (int i = nestedCmds.size() - 1; i >= idx; --i)
+    for (long i = nestedCmds.size() - 1; i >= idx; --i)
         getVarMgr().popScope();
 
     // jump back to previous function
@@ -829,7 +830,7 @@ void executionManager::exeLoopGuardOpr(const loopGuardOperation *pOpr)
 
     // exit the loop if condition is false
     auto data = getVarMgr().getVariableInfo(pOpr->testVar)->getData();
-    if (*reinterpret_cast<const int *>(data) == 0)
+    if (*reinterpret_cast<const long *>(data) == 0)
     {
         nestedCmds.pop_back();
         nestedCmdIdxs.pop_back();
@@ -894,7 +895,7 @@ void executionManager::exeCondBlkOpr(const condBlkOperation *pOpr)
 {
     // enter the conditional block if the condition holds true
     auto data = getVarMgr().getVariableInfo(pOpr->testVar)->getData();
-    if (*reinterpret_cast<const int*>(data) != 0)
+    if (*reinterpret_cast<const long*>(data) != 0)
     {
         nestedCmds.push_back(&(pOpr->cmdseq));
         nestedCmdIdxs.push_back(0);

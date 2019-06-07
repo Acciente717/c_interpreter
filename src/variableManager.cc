@@ -277,7 +277,7 @@ VariableInfoBase *VariableManager::searchVariableRecursive(
     const std::string &varName
 )
 {
-    for (int i = varStack.size() - 1; i >= 0; --i)
+    for (long i = varStack.size() - 1; i >= 0; --i)
     {
         auto iter = varStack[i].find(varName);
         if (iter != varStack[i].end())
@@ -339,7 +339,7 @@ void VariableManager::initializeVariable(const std::string &typeName,
 void VariableManager::declareArrayVariable(
     const std::string &baseTypeName,
     const std::string &varName,
-    const std::vector<int> &shape,
+    const std::vector<long> &shape,
     bool isTemporary)
 {
     // duplicate variable declaration
@@ -403,7 +403,7 @@ VariableInfoBase *VariableManager::getVariableInfo(const std::string &varName)
 }
 
 
-int VariableManager::getVariableTypeNum(const std::string &varName)
+long VariableManager::getVariableTypeNum(const std::string &varName)
 {
     auto pVar = searchVariableRecursive(varName);
     if (!pVar)
@@ -436,7 +436,7 @@ const void *VariableManager::getReturnValueData()
     return pReturnValue->getData();
 }
 
-int VariableManager::getReturnValueTypeNum()
+long VariableManager::getReturnValueTypeNum()
 {
     return pReturnValue->getTypeNum();
 }

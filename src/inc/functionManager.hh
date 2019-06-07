@@ -22,14 +22,14 @@ enum builtinFuncEnum
 struct builtinFuncInfo
 {
     builtinFuncEnum builtinNum;
-    std::vector<int> paramTypeNums;
+    std::vector<long> paramTypeNums;
 };
 
 struct functionInfo
 {
-    std::vector<int> paramTypeNums;
+    std::vector<long> paramTypeNums;
     std::vector<std::string> paramNames;
-    int retType;
+    long retType;
     cmdSeq cmds;
 };
 
@@ -43,9 +43,9 @@ class functionManager
     inline functionManager();
 
     void defineFunction(const std::string &name,
-                        std::vector<int> &&paramTypeNums,
+                        std::vector<long> &&paramTypeNums,
                         std::vector<std::string> &&paramNames,
-                        int retType,
+                        long retType,
                         cmdSeq &&cmds);
     inline const decltype(funcs) *getAllDefinedFuncs();
     const functionInfo * getFunction(const std::string &name);

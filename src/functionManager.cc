@@ -15,15 +15,15 @@ functionManager &getFuncMgr()
 
 void functionManager::initBuiltinFunctions()
 {
-    for (int i = 0; i < BUILTIN_FUNC_NUM; ++i)
+    for (long i = 0; i < BUILTIN_FUNC_NUM; ++i)
     {
         switch (i)
         {
         case CPUTINT:
-            builtins["cputint"] = {CPUTINT, {CINT32}};
+            builtins["cputint"] = {CPUTINT, {CLONG}};
             break;
         case CPUTCHAR:
-            builtins["cputchar"] = {CPUTCHAR, {CINT32}};
+            builtins["cputchar"] = {CPUTCHAR, {CLONG}};
             break;
         case CPUTFLOAT:
             builtins["cputfloat"] = {CPUTFLOAT, {CFLOAT}};
@@ -37,9 +37,9 @@ void functionManager::initBuiltinFunctions()
 
 void functionManager::defineFunction(
     const std::string &name,
-    std::vector<int> &&paramTypeNums,
+    std::vector<long> &&paramTypeNums,
     std::vector<std::string> &&paramNames,
-    int retType,
+    long retType,
     cmdSeq &&cmds)
 {
     auto iter = funcs.find(name);
@@ -78,10 +78,10 @@ void functionManager::invokeBuiltin(const std::string &funcName,
     switch (iter->second.builtinNum)
     {
     case CPUTINT:
-        cputint(*reinterpret_cast<const int*>(pparams[0]));
+        cputint(*reinterpret_cast<const long*>(pparams[0]));
         break;
     case CPUTCHAR:
-        cputchar(*reinterpret_cast<const int*>(pparams[0]));
+        cputchar(*reinterpret_cast<const long*>(pparams[0]));
         break;
     case CPUTFLOAT:
         cputfloat(*reinterpret_cast<const float*>(pparams[0]));

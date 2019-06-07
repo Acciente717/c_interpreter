@@ -1,6 +1,6 @@
 void main()
 {
-    int ival;
+    long ival;
     ival = 2;
     cputint(ival);
     cputchar(10);

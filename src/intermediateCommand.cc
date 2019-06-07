@@ -71,7 +71,7 @@ void command::releaseMemory()
     default:
         std::cerr << "Fatal error: unknown command type while destructing"
                   << " the command: " << this << std::endl;
-        std::cerr << "cmdType number: " << static_cast<int>(type) << std::endl;
+        std::cerr << "cmdType number: " << static_cast<long>(type) << std::endl;
         std::terminate();
     }
 }

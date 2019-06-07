@@ -1,13 +1,13 @@
 void main()
 {
-    int ival1 = 1.5;
+    long ival1 = 1.5;
     cputint(ival1);
     cputchar(10);
     ival1 = 0.5;
     cputint(ival1);
     cputchar(10);
     float fval = 2.5;
-    int ival2 = fval;
+    long ival2 = fval;
     cputint(ival2);
     cputchar(10);
     fval = 3.5;

@@ -2,7 +2,7 @@
 %%
 
  /* Reserved Type Keywords */
-int      { return CINT_TYPE_INT; }
+long      { return CINT_TYPE_LONG; }
 float   { return CINT_TYPE_FLOAT; }
 void     { return CINT_TYPE_VOID; }
 

@@ -1,8 +1,8 @@
 void main()
 {
-    int ival1;
-    int ival2;
-    int ival3;
+    long ival1;
+    long ival2;
+    long ival3;
     ival1 = 2333; ival2 = 1111;
 
     ival3 = 2333 + 1111;

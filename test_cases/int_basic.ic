@@ -1,10 +1,10 @@
 void main()
 {
-    int val1;
-    int val2 = 2;
+    long val1;
+    long val2 = 2;
     cputint(val2);
     cputchar(10);
-    int val3 = val2;
+    long val3 = val2;
     cputint(val3);
     cputchar(10);
     val1 = 3;
