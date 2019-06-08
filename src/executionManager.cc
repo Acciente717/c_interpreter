@@ -373,9 +373,10 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
 
 void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
 {
-    decltype(getVarMgr().getVariableInfo("")) yInfo, zInfo;
+    decltype(getVarMgr().getVariableInfo("")) xInfo, yInfo, zInfo;
     const void *yPtr, *zPtr;
     void *tgtPtr;
+    bool needWriteBack;
 
     std::unique_ptr<uint8_t[]> xSmart, ySmart, zSmart;
     long superType;
@@ -395,11 +396,19 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
                                              yInfo->getData());
             yPtr = ySmart.get();
         }
+        else
+        {
+            yPtr = yInfo->getData();
+        }
         if (zInfo->getTypeNum() != superType)
         {
             zSmart = createConvertedVariable(superType, zInfo->getTypeNum(),
                                              zInfo->getData());
             zPtr = zSmart.get();
+        }
+        else
+        {
+            zPtr = zInfo->getData();
         }
     }
     else
@@ -409,21 +418,10 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
         zPtr = zInfo->getData();
     }
 
-    // If x is a temporary variable, we must first declare it to the
-    // variable manager.
-    if (pOpr->vars[0][0] == '#')
-    {
-        getVarMgr().declareVariable(
-            getTypeMgr().getTypenameByNum(superType),
-            pOpr->vars[0], true);
-    }
-
-    auto xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
-
     // If x has different types from (y OP z), create a temporary variable
     // for x. For arithmic operations, create a temporaty variable with
     // the same type as superType. For logical operations, create a variable
-    // with the time long.
+    // with the type long.
     switch (pOpr->oprType)
     {
     // arithmic operations
@@ -432,14 +430,28 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     case ternaryOprType::assignProduct:
     case ternaryOprType::assignQuotient:
     case ternaryOprType::assignResidue:
+
+        // If x is a temporary variable, we must first declare it to the
+        // variable manager with the type superType, since we are doing
+        // arighmic operations.
+        if (pOpr->vars[0][0] == '#')
+        {
+            getVarMgr().declareVariable(
+                getTypeMgr().getTypenameByNum(superType),
+                pOpr->vars[0], true);
+        }
+        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+
         if (xInfo->getTypeNum() != superType)
         {
             xSmart.reset(new uint8_t[basicTypesSize[superType]]);
             tgtPtr = xSmart.get();
+            needWriteBack = true;
         }
         else
         {
             tgtPtr = xInfo->getMutableData();
+            needWriteBack = false;
         }
         break;
 
@@ -452,14 +464,28 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     case ternaryOprType::assignNotEqual:
     case ternaryOprType::assignLogicAnd:
     case ternaryOprType::assignLogicOr:
+
+        // If x is a temporary variable, we must first declare it to the
+        // variable manager with type long, since we are doing logical
+        // operations.
+        if (pOpr->vars[0][0] == '#')
+        {
+            getVarMgr().declareVariable(
+                getTypeMgr().getTypenameByNum(CLONG),
+                pOpr->vars[0], true);
+        }
+        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+
         if (xInfo->getTypeNum() != CLONG)
         {
             xSmart.reset(new uint8_t[basicTypesSize[CLONG]]);
             tgtPtr = xSmart.get();
+            needWriteBack = true;
         }
         else
         {
             tgtPtr = xInfo->getMutableData();
+            needWriteBack = false;
         }
         break;
     default:
@@ -481,7 +507,7 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
 
     // if we previous write to the temporary variable, convert and
     // write back to x
-    if (xInfo->getTypeNum() != superType)
+    if (needWriteBack)
     {
         xSmart = createConvertedVariable(
             xInfo->getTypeNum(), superType, xSmart.get());
