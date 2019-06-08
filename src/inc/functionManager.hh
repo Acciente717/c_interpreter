@@ -28,6 +28,8 @@ struct builtinFuncInfo
 struct functionInfo
 {
     std::vector<long> paramTypeNums;
+    std::vector<long> paramBaseTypeNums;
+    std::vector<std::vector<long>> paramSubscripts;
     std::vector<std::string> paramNames;
     long retType;
     cmdSeq cmds;
@@ -44,6 +46,8 @@ class functionManager
 
     void defineFunction(const std::string &name,
                         std::vector<long> &&paramTypeNums,
+                        std::vector<long> &&paramBaseTypeNums,
+                        std::vector<std::vector<long>> &&paramSubscripts,
                         std::vector<std::string> &&paramNames,
                         long retType,
                         cmdSeq &&cmds);

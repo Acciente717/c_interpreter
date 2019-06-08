@@ -12,7 +12,7 @@ const char *basicTypesName[] = {
     "long",
     "double",
     "void",
-    ""
+    "#array"
 };
 
 const long basicTypesSize[] = {

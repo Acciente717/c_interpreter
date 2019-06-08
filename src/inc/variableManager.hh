@@ -46,7 +46,7 @@ class VariableInfoBase
     virtual decltype(isReference) getIsReference() const noexcept = 0;
     virtual void updateData(const void *new_data) = 0;
     virtual void setReference(void *new_ref) = 0;
-    virtual const void *getReference() = 0;
+    virtual const void *getReference() const = 0;
 };
 
 class VariableInfoArray : public VariableInfoBase
@@ -81,7 +81,7 @@ class VariableInfoArray : public VariableInfoBase
     decltype(isReference) getIsReference() const noexcept override;
     void updateData(const void *new_data) override;
     void setReference(void *new_ref) override;
-    const void *getReference() override;
+    const void *getReference() const override;
 
     std::unique_ptr<VariableInfoArray>
         address(const decltype(dimSizes) &indicies);
@@ -107,7 +107,7 @@ class VariableInfoSolid : public VariableInfoBase
     decltype(isReference) getIsReference() const noexcept override;
     void updateData(const void *new_data) override;
     void setReference(void *new_ref) override;
-    const void *getReference() override;
+    const void *getReference() const override;
 };
 
 using variableDictionary =
@@ -150,6 +150,10 @@ class VariableManager
     void moveInArrayVariable(
         const std::string &varName,
         std::unique_ptr<VariableInfoArray> newArrayVar);
+    void initializeArrayArgument(const VariableInfoArray *refArray,
+                                 const std::string &baseTypeName,
+                                 const std::string &varName,
+                                 const std::vector<long> &shape);
     // const void *getVariableData(const std::string &varName);
     VariableInfoBase *getVariableInfo(const std::string &varName);
     long getVariableTypeNum(const std::string &varName);

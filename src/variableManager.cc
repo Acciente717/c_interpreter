@@ -163,7 +163,7 @@ VariableInfoArray& VariableInfoArray::operator=(
 }
 
 
-const void *VariableInfoArray::getReference()
+const void *VariableInfoArray::getReference() const
 {
     return data;
 }
@@ -252,7 +252,7 @@ VariableInfoSolid& VariableInfoSolid::operator=(
 }
 
 
-const void *VariableInfoSolid::getReference()
+const void *VariableInfoSolid::getReference() const
 {
     throw badVariableOperation("VariableInfoSolid::getReference");
 }
@@ -375,6 +375,29 @@ void VariableManager::moveInArrayVariable(
         throw duplicateVariableName(varName);
 
     varStack.back()[varName] = std::move(newArrayVar);
+}
+
+
+void VariableManager::initializeArrayArgument(
+    const VariableInfoArray *refArray,
+    const std::string &baseTypeName,
+    const std::string &varName,
+    const std::vector<long> &shape)
+{
+    // duplicate variable declaration
+    auto pVar = searchVariableCurrentScope(varName);
+    if (pVar)
+        throw duplicateVariableName(varName);
+
+    auto baseTypeNum = getTypeMgr().getTypeNumByName(baseTypeName);
+    auto type = getTypeMgr().getTypeByNum(baseTypeNum);
+
+    varStack.back().emplace(
+        varName,
+        std::make_unique<VariableInfoArray>(
+            baseTypeNum,
+            const_cast<void *>(refArray->getReference()),
+            shape, true));
 }
 
 void VariableManager::assignVariable(const std::string &varName,

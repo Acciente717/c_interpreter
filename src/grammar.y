@@ -5,6 +5,7 @@
 #include <memory>
 #include <stack>
 #include <cassert>
+#include <climits>
 
 #include "intermediateCommand.hh"
 #include "yaccInfoStructure.hh"
@@ -35,6 +36,7 @@ $$ = cint::yaccInfo(yaccInfo::infoType::varName,\
 cint::basicTypesEnum gActiveTypeNum;
 
 std::vector<long> gFuncParamTypes;
+std::vector<long> gFuncParamBaseTypes;
 std::vector<std::string> gFuncParamNames;
 std::vector<std::string> gFuncArgNames;
 
@@ -44,7 +46,9 @@ std::unordered_set<std::string> *gpExistTmpVar;
 std::string gLexIdentifier;
 std::string gLexInteger;
 std::string gLexDouble;
-std::vector<std::string> gSubscripts;
+std::vector<std::string> gTextSubscripts;
+std::vector<std::vector<long>> gParamSubscripts;
+std::vector<long> gLongSubscripts;
 
 extern "C"
 {
@@ -118,6 +122,8 @@ ND_FUNCTION_DEFINITION      : ND_TYPE_NAME ND_IDENTIFIER ND_PARAM_LIST ND_BLOCK_
                                     cint::getFuncMgr().defineFunction(
                                         *reinterpret_cast<std::string *>($2.data),
                                         std::move(gFuncParamTypes),
+                                        std::move(gFuncParamBaseTypes),
+                                        std::move(gParamSubscripts),
                                         std::move(gFuncParamNames),
                                         cint::getTypeMgr().getTypeNumByName(
                                             *reinterpret_cast<std::string*>($1.data)
@@ -127,6 +133,7 @@ ND_FUNCTION_DEFINITION      : ND_TYPE_NAME ND_IDENTIFIER ND_PARAM_LIST ND_BLOCK_
                                     
                                     gFuncParamNames.clear();
                                     gFuncParamTypes.clear();
+                                    gParamSubscripts.clear();
                                     cmdSeqStk.pop();
                                     assert(cmdSeqStk.size() == 0);
                                 }
@@ -144,28 +151,68 @@ ND_PARAM_LIST               : CINT_DELIM_LPAREN CINT_DELIM_RPAREN
                             ;
 
  /* Non empty parameter list. */
-ND_NON_EMPTY_PARAM_LIST     : ND_TYPE_NAME ND_IDENTIFIER
+ND_NON_EMPTY_PARAM_LIST     : ND_TYPE_NAME ND_IDENTIFIER ND_CONST_INDEX_LIST
                                 {
-                                    gFuncParamTypes.emplace_back(
+                                    if (gLongSubscripts.empty())
+                                        gFuncParamTypes.emplace_back(
+                                            cint::getTypeMgr().getTypeNumByName(
+                                            *reinterpret_cast<std::string *>($1.data))
+                                        );
+                                    else
+                                        gFuncParamTypes.emplace_back(
+                                            cint::CARRAY
+                                        );
+                                    gFuncParamBaseTypes.emplace_back(
                                         cint::getTypeMgr().getTypeNumByName(
                                         *reinterpret_cast<std::string *>($1.data))
                                     );
                                     gFuncParamNames.emplace_back(
                                         *reinterpret_cast<std::string *>($2.data)
                                     );
+                                    gParamSubscripts.emplace_back(std::move(gLongSubscripts));
+                                    gLongSubscripts.clear();
                                 }
-                            | ND_NON_EMPTY_PARAM_LIST CINT_DELIM_COMMA ND_TYPE_NAME ND_IDENTIFIER
+                            | ND_NON_EMPTY_PARAM_LIST CINT_DELIM_COMMA ND_TYPE_NAME ND_IDENTIFIER ND_CONST_INDEX_LIST
                                 {
-                                    gFuncParamTypes.emplace_back(
+                                    if (gLongSubscripts.empty())
+                                        gFuncParamTypes.emplace_back(
+                                            cint::getTypeMgr().getTypeNumByName(
+                                            *reinterpret_cast<std::string *>($1.data))
+                                        );
+                                    else
+                                        gFuncParamTypes.emplace_back(
+                                            cint::CARRAY
+                                        );
+                                    gFuncParamBaseTypes.emplace_back(
                                         cint::getTypeMgr().getTypeNumByName(
-                                        *reinterpret_cast<std::string *>($3.data))
+                                        *reinterpret_cast<std::string *>($1.data))
                                     );
                                     gFuncParamNames.emplace_back(
                                         *reinterpret_cast<std::string *>($4.data)
                                     );
+                                    gParamSubscripts.emplace_back(std::move(gLongSubscripts));
+                                    gLongSubscripts.clear();
                                 }
                             ;
 
+ /* Index list with const integer value. */
+ND_CONST_INDEX_LIST         : /* empty */
+                            | CINT_DELIM_LBRACKET CINT_DELIM_RBRACKET
+                                {
+                                    gLongSubscripts.push_back(LONG_MIN);
+                                }
+                            | ND_NON_EMPTY_CONST_INDEXS
+                            ;
+
+ND_NON_EMPTY_CONST_INDEXS   : CINT_DELIM_LBRACKET CINT_INTEGER CINT_DELIM_RBRACKET
+                                {
+                                    gLongSubscripts.push_back(std::stol(gLexInteger));
+                                }
+                            | ND_NON_EMPTY_CONST_INDEXS CINT_DELIM_LBRACKET CINT_INTEGER CINT_DELIM_RBRACKET
+                                {
+                                    gLongSubscripts.push_back(std::stol(gLexInteger));
+                                }
+                            ;
 
  /* A statement. */
 ND_STATEMENT                : ND_DECLARE_VARIABLE
@@ -366,19 +413,19 @@ ND_DECLARE_ARRAY            : ND_TYPE_NAME ND_IDENTIFIER ND_INDEX_LIST CINT_DELI
                                                                         *reinterpret_cast<std::string *>($1.data),
                                                                         *reinterpret_cast<std::string *>
                                                                                                 ($2.data),
-                                                                        gSubscripts}));
+                                                                        gTextSubscripts}));
                                 }
                             ;
 
  /* Index list. */
 ND_INDEX_LIST               : CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
                                 {
-                                    gSubscripts.clear();
-                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($2.data)));
+                                    gTextSubscripts.clear();
+                                    gTextSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($2.data)));
                                 }
                             | ND_INDEX_LIST CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
                                 {
-                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
+                                    gTextSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
                                 }
                             ;
 
@@ -480,7 +527,7 @@ ND_ARITHMIC_OPERATION       : ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_D
                                         new writeArrayOperation{
                                             std::move(*reinterpret_cast<std::string *>
                                                         ($1.data)),
-                                            gSubscripts,
+                                            gTextSubscripts,
                                             std::move(*reinterpret_cast<std::string *>
                                                         ($3.data)),
                                         }
@@ -683,7 +730,7 @@ ND_EXPRESSION_1             : ND_IDENTIFIER
                                                                                 tmpVar,
                                                                                 std::move(*reinterpret_cast<std::string *>
                                                                                          ($1.data)),
-                                                                                gSubscripts
+                                                                                gTextSubscripts
                                                                            }
                                                                        ));
                                     $$ = yaccInfo(yaccInfo::infoType::varName,
@@ -739,13 +786,13 @@ ND_STANDALONE_LITERAL       : CINT_INTEGER
 
 ND_ARRAY_ELEMENT            : ND_IDENTIFIER CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
                                 {
-                                    gSubscripts.clear();
-                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
+                                    gTextSubscripts.clear();
+                                    gTextSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
                                     $$ = $1;
                                 }
                             | ND_ARRAY_ELEMENT CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
                                 {
-                                    gSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
+                                    gTextSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
                                     $$ = $1;
                                 }
                             ;

@@ -654,12 +654,27 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
         }
         else
         {
-            getVarMgr().initializeVariable(
-                getTypeMgr().getTypenameByNum(paramType),
-                pFunc->paramNames[i],
-                getVarMgr().getVariableInfo(pOpr->varVec[i])->getData(),
-                true
-            );
+            // if we are initializing an array argument
+            if (varType == CARRAY)
+            {
+                getVarMgr().initializeArrayArgument(
+                    static_cast<const VariableInfoArray *>(
+                        getVarMgr().getVariableInfo(pOpr->varVec[i])
+                    ),
+                    getTypeMgr().getTypenameByNum(pFunc->paramBaseTypeNums[i]),
+                    pFunc->paramNames[i],
+                    pFunc->paramSubscripts[i]
+                );
+            }
+            else
+            {
+                getVarMgr().initializeVariable(
+                    getTypeMgr().getTypenameByNum(paramType),
+                    pFunc->paramNames[i],
+                    getVarMgr().getVariableInfo(pOpr->varVec[i])->getData(),
+                    true
+                );
+            }
         }
     }
     getVarMgr().setScopeBoundary();
