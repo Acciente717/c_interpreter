@@ -75,7 +75,8 @@ enum class cmdType
     normalBlock,
     conditionalBlock,
     declareVariable,
-    declareArray
+    declareArray,
+    getStructureField
 };
 
 /**
@@ -335,6 +336,18 @@ struct declArrOperation
     std::vector<VarName> idxs;
 };
 
+/**
+ *  Get field of a strucure variable.
+ * 
+ *  target = var.field;
+ */
+struct getStructFldOperation
+{
+    VarName target;
+    VarName var;
+    VarName field;
+};
+
 struct command
 {
     cmdType type;
@@ -376,6 +389,8 @@ struct command
                             std::unique_ptr<declVarOperation> opr);
     inline explicit command(cmdType type,
                             std::unique_ptr<declArrOperation> opr);
+    inline explicit command(cmdType type,
+                            std::unique_ptr<getStructFldOperation> opr);
     inline command() : type(cmdType::empty), opr(nullptr) {}
     ~command();
     command(command &&other);
@@ -618,6 +633,19 @@ command::command(cmdType _type, std::unique_ptr<declArrOperation> _opr)
     iferr (!static_cast<bool>(_opr))
         throw cmdCreationError("Error: invalid pointer as argument"
                                " while creating declare array operation!");
+
+    type = _type;
+    opr = _opr.release();
+}
+
+command::command(cmdType _type, std::unique_ptr<getStructFldOperation> _opr)
+{
+    iferr (_type != cmdType::getStructureField)
+        throw cmdCreationError("Error: argument mismatch while creating"
+                               " get structure field operation!");
+    iferr (!static_cast<bool>(_opr))
+        throw cmdCreationError("Error: invalid pointer as argument while"
+                               " creating get structure field operation!");
 
     type = _type;
     opr = _opr.release();

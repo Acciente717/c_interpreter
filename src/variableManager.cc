@@ -62,7 +62,7 @@ decltype(VariableInfoArray::baseTypeSize)
 {
     if (isLeaf)
         return baseTypeSize;
-    return topLevelSize * dimSizes[0];
+    return topLevelShape * dimSizes[0];
 }
 
 const void *VariableInfoArray::getData() const noexcept
@@ -109,7 +109,7 @@ VariableInfoArray::VariableInfoArray(
     decltype(baseTypeNum) _baseTypeNum,
     decltype(data) _data,
     const decltype(dimSizes) &_dimSizes,
-    decltype(topLevelSize) _topLevelSize,
+    decltype(topLevelShape) _topLevelShape,
     decltype(isReference) _isReference)
   : VariableInfoBase(_baseTypeNum, _data, _isReference, false)
 {
@@ -117,14 +117,14 @@ VariableInfoArray::VariableInfoArray(
     {
         isLeaf = true;
         shift = 0;
-        topLevelSize = 0;
+        topLevelShape = 0;
     }
     else
     {
         isLeaf = false;
         shift = 0;
         dimSizes = _dimSizes;
-        topLevelSize = _topLevelSize;
+        topLevelShape = _topLevelShape;
     }
 }
 
@@ -145,14 +145,14 @@ VariableInfoArray::VariableInfoArray(
     dimSizes[i] = baseTypeSize;
     for (--i; i >= 0; --i)
         dimSizes[i] = dimSizes[i + 1] * _shape[i + 1];
-    topLevelSize = _shape[0];
+    topLevelShape = _shape[0];
 }
 
 VariableInfoArray::VariableInfoArray(VariableInfoArray &&other) noexcept
   : VariableInfoBase(std::move(other))
 {
     shift = other.shift;
-    topLevelSize = other.topLevelSize;
+    topLevelShape = other.topLevelShape;
     isLeaf = other.isLeaf;
     dimSizes = std::move(other.dimSizes);
 }
@@ -191,10 +191,18 @@ VariableInfoArray::address(const decltype(dimSizes) &indicies)
     for (auto i = 0; i < indicies.size(); ++i)
         shiftVal += dimSizes[i] * indicies[i];
 
+    if (indicies.size() == dimSizes.size())
+    {
+        return std::make_unique<VariableInfoArray>(
+            baseTypeNum, reinterpret_cast<uint8_t *>(data) + shiftVal,
+            decltype(dimSizes){}, 0, true
+        );
+    }
+
     return std::make_unique<VariableInfoArray>(
         baseTypeNum, reinterpret_cast<uint8_t *>(data) + shiftVal,
         decltype(dimSizes){dimSizes.begin() + indicies.size(), dimSizes.end()},
-        0, true
+        dimSizes[indicies.size() - 1] / dimSizes[indicies.size()], true
     );
 }
 
@@ -247,8 +255,9 @@ void VariableInfoSolid::setReference(void *new_ref)
 VariableInfoSolid::VariableInfoSolid(
     decltype(baseTypeNum) _baseTypeNum,
     decltype(data) _data,
-    decltype(isTemporary) _isTemporary) noexcept
-  : VariableInfoBase(_baseTypeNum, _data, false, _isTemporary)
+    decltype(isTemporary) _isTemporary,
+    decltype(isReference) _isReference) noexcept
+  : VariableInfoBase(_baseTypeNum, _data, _isReference, _isTemporary)
 { }
 
 VariableInfoSolid::VariableInfoSolid(VariableInfoSolid &&other) noexcept
@@ -345,6 +354,26 @@ void VariableManager::initializeVariable(const std::string &typeName,
         std::make_unique<VariableInfoSolid>
             (typeNum, data.get(), isTemporary));
     data.release();
+}
+
+void VariableManager::initializeReferenceVariable(
+    long typeNum,
+    const std::string &varName,
+    void *refData,
+    bool isTemporary)
+{
+    // duplicate variable declaration
+    auto pVar = searchVariableCurrentScope(varName);
+    if (unlikely(pVar != nullptr))
+        throw duplicateVariableName(varName);
+
+    auto type = getTypeMgr().getTypeByNum(typeNum);
+
+    // insert new variable
+    varStack.back().emplace(
+        varName,
+        std::make_unique<VariableInfoSolid>
+            (typeNum, refData, isTemporary, true));
 }
 
 void VariableManager::declareArrayVariable(

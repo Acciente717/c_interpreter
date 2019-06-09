@@ -50,6 +50,8 @@ std::vector<std::string> gTextSubscripts;
 std::vector<std::vector<long>> gParamSubscripts;
 std::vector<long> gLongSubscripts;
 
+std::vector<cint::fieldTextInfo> gStructInfos;
+
 extern "C"
 {
         int yyparse(void);
@@ -64,7 +66,7 @@ extern "C"
 %}
 
  /* Reserved Type Keywords */
-%token CINT_TYPE_LONG CINT_TYPE_DOUBLE CINT_TYPE_VOID
+%token CINT_TYPE_LONG CINT_TYPE_DOUBLE CINT_TYPE_VOID CINT_STRUCT
 
  /* Reserved Control Keywords */
 %token CINT_CTRL_IF CINT_CTRL_ELSE CINT_CTRL_WHILE CINT_CTRL_BREAK 
@@ -75,7 +77,7 @@ extern "C"
 %token CINT_OPR_MOD CINT_OPR_LOGIC_AND CINT_OPR_LOGIC_OR
 %token CINT_OPR_LT CINT_OPR_EQ CINT_OPR_GT CINT_OPR_NE
 %token CINT_OPR_LE CINT_OPR_GE
-%token CINT_OPR_ASSIGN CINT_OPR_NOT
+%token CINT_OPR_ASSIGN CINT_OPR_NOT CINT_OPR_DOT
 
  /* Delimiters */
 %token CINT_DELIM_LPAREN CINT_DELIM_RPAREN
@@ -98,6 +100,7 @@ extern "C"
 
 start                       : /* empty */
                             | start ND_FUNCTION_DEFINITION
+                            | start ND_STRUCT_DEFINITION
                             ;
 
 
@@ -109,6 +112,45 @@ ND_BLOCK_STATEMENTS         : CINT_DELIM_LBRACE
                                     gpExistTmpVar = new std::unordered_set<std::string>;
                                 }
                               ND_STATEMENT_SEQUENCE CINT_DELIM_RBRACE
+                            ;
+
+
+ /* Define a structure. */
+ND_STRUCT_DEFINITION        : CINT_STRUCT ND_IDENTIFIER CINT_DELIM_LBRACE ND_STRUCT_DEF_SEQUENCE CINT_DELIM_RBRACE CINT_DELIM_SEMICOLON
+                                {
+                                    cint::getTypeMgr().defineStructure(
+                                        "@" + std::move(*reinterpret_cast<std::string*>($2.data)),
+                                        std::move(gStructInfos)
+                                    );
+                                    gStructInfos.clear();
+                                    gLongSubscripts.clear();
+                                }
+                            ;
+
+ /* Field in the structure. */
+ND_STRUCT_DEF_SEQUENCE      : /* empty */
+                                {
+                                    gStructInfos.clear();
+                                }
+                            | ND_STRUCT_DEF_SEQUENCE ND_TYPE_NAME ND_IDENTIFIER ND_STRUCT_INDEXS CINT_DELIM_SEMICOLON
+                                {
+                                    gStructInfos.emplace_back(cint::fieldTextInfo{
+                                        *reinterpret_cast<std::string*>($2.data),
+                                        *reinterpret_cast<std::string*>($3.data),
+                                        std::move(gLongSubscripts)
+                                    });
+                                }
+                            ;
+
+ /* Array index of a field in a structure. */
+ND_STRUCT_INDEXS            : /* empty */
+                                {
+                                    gLongSubscripts.clear();
+                                }
+                            | ND_STRUCT_INDEXS CINT_DELIM_LBRACKET CINT_INTEGER CINT_DELIM_RBRACKET
+                                {
+                                    gLongSubscripts.push_back(std::stol(gLexInteger));
+                                }
                             ;
 
 
@@ -469,6 +511,12 @@ ND_TYPE_NAME                : CINT_TYPE_LONG
                                     $$ = yaccInfo(yaccInfo::infoType::typeName,
                                                   "void");
                                 }
+                            | CINT_STRUCT ND_IDENTIFIER
+                                {
+                                    using namespace cint;
+                                    $$ = yaccInfo(yaccInfo::infoType::typeName,
+                                                  "@" + *reinterpret_cast<std::string*>($2.data));
+                                }
                             ;
 
 
@@ -507,7 +555,7 @@ ND_CONTROL_COMMAND          : CINT_CTRL_BREAK CINT_DELIM_SEMICOLON
                             ;
 
  /* Do arithmic operation. */
-ND_ARITHMIC_OPERATION       : ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_DELIM_SEMICOLON
+ND_ARITHMIC_OPERATION       : ND_EXPRESSION CINT_OPR_ASSIGN ND_EXPRESSION CINT_DELIM_SEMICOLON
                                 {
                                     using namespace cint;
                                     cmdSeqStk.top()->cmds.emplace_back(cmdType::binaryOperation,
@@ -518,20 +566,6 @@ ND_ARITHMIC_OPERATION       : ND_IDENTIFIER CINT_OPR_ASSIGN ND_EXPRESSION CINT_D
                                                                     *reinterpret_cast<std::string *>($1.data),
                                                                     *reinterpret_cast<std::string *>($3.data)
                                                                 }));
-                                }
-                            | ND_ARRAY_ELEMENT CINT_OPR_ASSIGN ND_EXPRESSION CINT_DELIM_SEMICOLON
-                                {
-                                    using namespace cint;
-                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::writeArrayOperation,
-                                    std::unique_ptr<writeArrayOperation>(
-                                        new writeArrayOperation{
-                                            std::move(*reinterpret_cast<std::string *>
-                                                        ($1.data)),
-                                            gTextSubscripts,
-                                            std::move(*reinterpret_cast<std::string *>
-                                                        ($3.data)),
-                                        }
-                                    ));
                                 }
                             | ND_EXPRESSION CINT_DELIM_SEMICOLON
                             ;
@@ -711,15 +745,11 @@ ND_EXPRESSION_2             : ND_EXPRESSION_1
                                 }
                             ;
 
-ND_EXPRESSION_1             : ND_IDENTIFIER
+ND_EXPRESSION_1            : ND_EXPRESSION_0
                                 {
                                     $$ = $1;
                                 }
-                            | CINT_DELIM_LPAREN ND_EXPRESSION CINT_DELIM_RPAREN
-                                {
-                                    $$ = $2;
-                                }
-                            | ND_ARRAY_ELEMENT
+                            | ND_EXPRESSION_1 ND_ARRAY_INDEX
                                 {
                                     using namespace cint;
                                     std::string tmpVar;
@@ -735,6 +765,34 @@ ND_EXPRESSION_1             : ND_IDENTIFIER
                                                                        ));
                                     $$ = yaccInfo(yaccInfo::infoType::varName,
                                                   std::move(tmpVar));
+                                }
+                            | ND_EXPRESSION_1 CINT_OPR_DOT ND_IDENTIFIER
+                                {
+                                    using namespace cint;
+                                    std::string tmpVar;
+                                    while (isTempNameExist(tmpVar = genRandomStr(TEMP_NAME_LEN, true), *gpExistTmpVar));
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::getStructureField,
+                                                                       std::unique_ptr<getStructFldOperation>(
+                                                                           new getStructFldOperation{
+                                                                                tmpVar,
+                                                                                std::move(*reinterpret_cast<std::string *>
+                                                                                         ($1.data)),
+                                                                                std::move(*reinterpret_cast<std::string *>
+                                                                                         ($3.data))
+                                                                           }
+                                                                       ));
+                                    $$ = yaccInfo(yaccInfo::infoType::varName,
+                                                  std::move(tmpVar));
+                                }
+                            ;
+
+ND_EXPRESSION_0             : ND_IDENTIFIER
+                                {
+                                    $$ = $1;
+                                }
+                            | CINT_DELIM_LPAREN ND_EXPRESSION CINT_DELIM_RPAREN
+                                {
+                                    $$ = $2;
                                 }
                             | ND_STANDALONE_LITERAL
                                 {
@@ -784,16 +842,11 @@ ND_STANDALONE_LITERAL       : CINT_INTEGER
                             ;
 
 
-ND_ARRAY_ELEMENT            : ND_IDENTIFIER CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
+ND_ARRAY_INDEX              : CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
                                 {
                                     gTextSubscripts.clear();
-                                    gTextSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
-                                    $$ = $1;
-                                }
-                            | ND_ARRAY_ELEMENT CINT_DELIM_LBRACKET ND_EXPRESSION CINT_DELIM_RBRACKET
-                                {
-                                    gTextSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($3.data)));
-                                    $$ = $1;
+                                    gTextSubscripts.emplace_back(std::move(*reinterpret_cast<std::string *>($2.data)));
+                                    $$ = $2;
                                 }
                             ;
 

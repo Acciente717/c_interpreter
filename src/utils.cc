@@ -264,6 +264,17 @@ void printCmd(const command &cmd, long indent)
         break;
         // end of `declareArray`
 
+    case cmdType::getStructureField:
+        cout << "getStructureField: "
+             << reinterpret_cast<getStructFldOperation *>(cmd.opr)->target
+             << " = "
+             << reinterpret_cast<getStructFldOperation *>(cmd.opr)->var
+             << '.'
+             << reinterpret_cast<getStructFldOperation *>(cmd.opr)->field
+             << endl;
+        break;
+        // end of `getStructureField`
+
     default:
         cout << "unknown: " << endl;
     }

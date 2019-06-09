@@ -5,6 +5,7 @@
 long      { return CINT_TYPE_LONG; }
 double   { return CINT_TYPE_DOUBLE; }
 void     { return CINT_TYPE_VOID; }
+struct   { return CINT_STRUCT;  }
 
  /* Reserved Control Keywords */
 if       { return CINT_CTRL_IF; }
@@ -30,6 +31,7 @@ return   { return CINT_CTRL_RETURN; }
 "!="     { return CINT_OPR_NE; }
 "="      { return CINT_OPR_ASSIGN; }
 "!"      { return CINT_OPR_NOT; }
+"."      { return CINT_OPR_DOT; }
 
  /* Delimiters */
 "("      { return CINT_DELIM_LPAREN; }

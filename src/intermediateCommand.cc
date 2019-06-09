@@ -65,6 +65,9 @@ void command::releaseMemory()
     case cmdType::declareArray:
         delete reinterpret_cast<declArrOperation *>(opr);
         break;
+    case cmdType::getStructureField:
+        delete reinterpret_cast<getStructFldOperation *>(opr);
+        break;
     case cmdType::empty:
         opr = nullptr;
         break;

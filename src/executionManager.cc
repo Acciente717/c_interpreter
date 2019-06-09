@@ -536,7 +536,7 @@ void executionManager::exeReadArrOpr(const readArrayOperation *pOpr)
     auto readedVarInfo = arInfo->address(intVec);
 
     // we get a single element from the array
-    if (readedVarInfo->getTypeNum() != CARRAY)
+    if (false)
     {
         // If x is a temporary variable, we must first declare it to the
         // variable manager.
@@ -967,6 +967,41 @@ void executionManager::exeDeclArrOpr(const declArrOperation *pOpr)
     );
 }
 
+void executionManager::exeGetStructFldOpr(const getStructFldOperation *pOpr)
+{
+    auto typeNum = getVarMgr().getVariableTypeNum(pOpr->var);
+    auto pFldInfo = getTypeMgr().getFieldInfo(
+        typeNum,
+        pOpr->field
+    );
+
+    auto varData = getVarMgr().getVariableInfo(pOpr->var)->getMutableData();
+
+    // if the subfield is not an array
+    if (pFldInfo->dimSizes.empty())
+    {
+        // declare a temporary variable to the variable manager.
+        // this new variable is actually a reference to the specific
+        // memory location within the structure.
+        getVarMgr().initializeReferenceVariable(
+            pFldInfo->baseTypeNum, pOpr->target,
+            reinterpret_cast<uint8_t*>(varData) + pFldInfo->offset,
+            false
+        );
+    }
+    // if the subfield is indeed an array
+    else
+    {
+        auto newInfo = std::make_unique<VariableInfoArray>(
+            pFldInfo->baseTypeNum,
+            reinterpret_cast<uint8_t *>(varData) + pFldInfo->offset,
+            pFldInfo->dimSizes,
+            pFldInfo->topLayerShape, true
+        );
+        getVarMgr().moveInArrayVariable(pOpr->target, std::move(newInfo));
+    }
+}
+
 void executionManager::execute(const command &cmd)
 {
     switch (cmd.type)
@@ -1027,6 +1062,10 @@ void executionManager::execute(const command &cmd)
         break;
     case cmdType::declareArray:
         exeDeclArrOpr(reinterpret_cast<const declArrOperation*>(cmd.opr));
+        break;
+    case cmdType::getStructureField:
+        exeGetStructFldOpr(reinterpret_cast<const getStructFldOperation*>
+                           (cmd.opr));
         break;
     default:
         throw unknownSwitchCase("executionManager::execute");

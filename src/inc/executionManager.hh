@@ -33,6 +33,7 @@ class executionManager
     void exeCondBlkOpr(const condBlkOperation *pOpr);
     void exeDeclVarOpr(const declVarOperation *pOpr);
     void exeDeclArrOpr(const declArrOperation *pOpr);
+    void exeGetStructFldOpr(const getStructFldOperation *pOpr);
     void execute(const command &cmd);
  public:
     inline explicit executionManager(const std::string &entryFunc);

@@ -20,7 +20,7 @@ class VariableInfoBase
 {
  protected:
     long baseTypeNum;
-    unsigned baseTypeSize;
+    long baseTypeSize;
     void *data;
     bool isReference;
     bool isTemporary;
@@ -55,7 +55,7 @@ class VariableInfoArray : public VariableInfoBase
  protected:
     std::vector<long> dimSizes;
     ssize_t shift;
-    long topLevelSize;
+    long topLevelShape;
     bool isLeaf;
 
  public:
@@ -65,7 +65,7 @@ class VariableInfoArray : public VariableInfoBase
     explicit VariableInfoArray(decltype(baseTypeNum) _baseTypeNum,
                                decltype(data) _data,
                                const decltype(dimSizes) &_dimSizes,
-                               decltype(topLevelSize) _topLevelSize,
+                               decltype(topLevelShape) _topLevelShape,
                                decltype(isReference) _isReference);
     explicit VariableInfoArray(decltype(baseTypeNum) _baseTypeNum,
                                decltype(data) _data,
@@ -97,7 +97,9 @@ class VariableInfoSolid : public VariableInfoBase
     VariableInfoSolid& operator=(const VariableInfoSolid &other) = delete;
     explicit VariableInfoSolid(decltype(baseTypeNum) _baseTypeNum,
                                decltype(data) _data,
-                               decltype(isTemporary) _isTemporary) noexcept;
+                               decltype(isTemporary) _isTemporary,
+                               decltype(isReference) _isReference = false
+                              ) noexcept;
     explicit VariableInfoSolid(VariableInfoSolid &&other) noexcept;
     VariableInfoSolid& operator=(VariableInfoSolid &&other) noexcept;
     ~VariableInfoSolid() override;
@@ -145,6 +147,10 @@ class VariableManager
                             const std::string &varName,
                             const void *initData,
                             bool isTemporary);
+    void initializeReferenceVariable(long typeNum,
+                                     const std::string &varName,
+                                     void *refData,
+                                     bool isTemporary);
     void assignVariable(const std::string &varName, const void *data);
     void declareArrayVariable(const std::string &baseTypeName,
                               const std::string &varName,

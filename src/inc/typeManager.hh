@@ -30,19 +30,26 @@ extern const long basicTypesSize[];
 
 struct fieldInfo
 {
-    unsigned offset;
-    unsigned len;
-    long typeNum;
+    long offset;
+    long fieldSize;
+    long baseTypeNum;
     std::string name;
+    std::vector<long> dimSizes;
+    long topLayerShape;
+};
+
+struct fieldTextInfo
+{
+    std::string typeName;
+    std::string varName;
+    std::vector<long> idxs;
 };
 
 class typeInfo
 {
-    long typeNum;                      // number of the type
-    unsigned typeSize;                // size of the type
-    unsigned ptrLevel;                // level of pointer
+    long typeNum;                     // number of the type
+    long typeSize;                    // size of the type
     bool basic;                       // whether the size is one of the basics
-    std::vector<unsigned> arrSize;    // multi-dimensional array size
     std::string typeName;             // name of the type
     std::unordered_map<std::string, fieldInfo>
         fields;                       // fields contained in the type
@@ -57,15 +64,16 @@ class typeInfo
                              decltype(fields) &&_fields) noexcept;
     inline bool isBasic() const noexcept;
     inline std::string getName() const noexcept;
-    inline unsigned getSize() const noexcept;
+    inline long getSize() const noexcept;
     inline bool operator==(const typeInfo &rhs) const noexcept;
-    fieldInfo getFieldByName(const std::string &queryName) const;
+    const fieldInfo *getFieldByName(const std::string &queryName) const;
 };
 
 class typeManager
 {
     std::unordered_map<long, typeInfo> types;
     std::unordered_map<std::string, long> name2num;
+    long nextTypeNum;
 
     inline void initBuiltinTypes();
  public:
@@ -78,7 +86,12 @@ class typeManager
     typeInfo getTypeByNum(long _typeNum);
     std::string getTypenameByNum(long _typeNum);
     long getTypeNumByName(const std::string &_typeName);
-    unsigned getSizeByNum(long _typeNum);
+    long getSizeByNum(long _typeNum);
+    void defineStructure(
+        std::string &&structName,
+        std::vector<fieldTextInfo> &&infos);
+    const fieldInfo *getFieldInfo(long _typeNum,
+                                  const std::string &_fieldName);
 };
 
 typeManager& getTypeMgr();
@@ -95,7 +108,6 @@ typeInfo::typeInfo(decltype(typeNum) _typeNum,
       fields(_fields)
 {
     basic = _typeNum < basicTypesNum;
-    ptrLevel = 0;  // todo
 }
 
 typeInfo::typeInfo(decltype(typeNum) _typeNum,
@@ -106,17 +118,12 @@ typeInfo::typeInfo(decltype(typeNum) _typeNum,
       fields(_fields)
 {
     basic = _typeNum < basicTypesNum;
-    ptrLevel = 0;  // todo
 }
 
 
 inline bool typeInfo::operator==(const typeInfo &rhs) const noexcept
 {
     if (typeNum != rhs.typeNum)
-        return false;
-    if (ptrLevel != rhs.ptrLevel)
-        return false;
-    if (arrSize != rhs.arrSize)
         return false;
     return true;
 }
@@ -126,7 +133,7 @@ inline std::string typeInfo::getName() const noexcept
     return typeName;
 }
 
-inline unsigned typeInfo::getSize() const noexcept
+inline long typeInfo::getSize() const noexcept
 {
     return typeSize;
 }
@@ -150,6 +157,7 @@ inline void typeManager::initBuiltinTypes()
                             std::unordered_map<std::string, fieldInfo>()));
         name2num.emplace(basicTypesName[i], i);
     }
+    nextTypeNum = basicTypesNum + 1;
 }
 
 }  // namespace cint
