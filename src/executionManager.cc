@@ -256,7 +256,7 @@ void executionManager::exeUnaryOpr(const unaryOperation *pOpr)
                 xInfo->getTypeNum(),
                 getVarMgr().getReturnValueTypeNum(),
                 getVarMgr().getReturnValueData());
-            xInfo->updateData(temp.get());
+            xInfo->moveInData(temp.release());
         }
         else
         {
@@ -285,7 +285,7 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
                 xInfo->getTypeNum(),
                 yInfo->getTypeNum(),
                 yInfo->getData());
-            xInfo->updateData(temp.get());
+            xInfo->moveInData(temp.release());
         }
         else
         {
@@ -373,7 +373,8 @@ void executionManager::exeBinaryOpr(const binaryOperation *pOpr)
 
 void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
 {
-    decltype(getVarMgr().getVariableInfo("")) xInfo, yInfo, zInfo;
+    auto &varMgr = getVarMgr();
+    decltype(varMgr.getVariableInfo("")) xInfo, yInfo, zInfo;
     const void *yPtr, *zPtr;
     void *tgtPtr;
     bool needWriteBack;
@@ -381,41 +382,46 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     std::unique_ptr<uint8_t[]> xSmart, ySmart, zSmart;
     long superType;
 
-    yInfo = getVarMgr().getVariableInfo(pOpr->vars[1]);
-    zInfo = getVarMgr().getVariableInfo(pOpr->vars[2]);
+    yInfo = varMgr.getVariableInfo(pOpr->vars[1]);
+    zInfo = varMgr.getVariableInfo(pOpr->vars[2]);
+    auto yTypeNum = yInfo->getTypeNum();
+    auto zTypeNum = zInfo->getTypeNum();
+    auto yData = yInfo->getData();
+    auto zData = zInfo->getData();
+    decltype(yTypeNum) xTypeNum;
 
     // if y and z have different types, convert them before proceeding
-    if (yInfo->getTypeNum() != zInfo->getTypeNum())
+    if (yTypeNum != zTypeNum)
     {
         superType = typeManager::chooseSuperType(
-            yInfo->getTypeNum(),
-            zInfo->getTypeNum());
-        if (yInfo->getTypeNum() != superType)
+            yTypeNum,
+            zTypeNum);
+        if (yTypeNum != superType)
         {
-            ySmart = createConvertedVariable(superType, yInfo->getTypeNum(),
-                                             yInfo->getData());
+            ySmart = createConvertedVariable(superType, yTypeNum,
+                                             yData);
             yPtr = ySmart.get();
         }
         else
         {
-            yPtr = yInfo->getData();
+            yPtr = yData;
         }
-        if (zInfo->getTypeNum() != superType)
+        if (zTypeNum != superType)
         {
-            zSmart = createConvertedVariable(superType, zInfo->getTypeNum(),
-                                             zInfo->getData());
+            zSmart = createConvertedVariable(superType, zTypeNum,
+                                             zData);
             zPtr = zSmart.get();
         }
         else
         {
-            zPtr = zInfo->getData();
+            zPtr = zData;
         }
     }
     else
     {
-        superType = yInfo->getTypeNum();
-        yPtr = yInfo->getData();
-        zPtr = zInfo->getData();
+        superType = yTypeNum;
+        yPtr = yData;
+        zPtr = zData;
     }
 
     // If x has different types from (y OP z), create a temporary variable
@@ -436,13 +442,14 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
         // arighmic operations.
         if (pOpr->vars[0][0] == '#')
         {
-            getVarMgr().declareVariable(
+            varMgr.declareVariable(
                 getTypeMgr().getTypenameByNum(superType),
                 pOpr->vars[0], true);
         }
-        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+        xInfo = varMgr.getVariableInfo(pOpr->vars[0]);
+        xTypeNum = xInfo->getTypeNum();
 
-        if (xInfo->getTypeNum() != superType)
+        if (xTypeNum != superType)
         {
             xSmart.reset(new uint8_t[basicTypesSize[superType]]);
             tgtPtr = xSmart.get();
@@ -470,13 +477,14 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
         // operations.
         if (pOpr->vars[0][0] == '#')
         {
-            getVarMgr().declareVariable(
+            varMgr.declareVariable(
                 getTypeMgr().getTypenameByNum(CLONG),
                 pOpr->vars[0], true);
         }
-        xInfo = getVarMgr().getVariableInfo(pOpr->vars[0]);
+        xInfo = varMgr.getVariableInfo(pOpr->vars[0]);
+        xTypeNum = xInfo->getTypeNum();
 
-        if (xInfo->getTypeNum() != CLONG)
+        if (xTypeNum != CLONG)
         {
             xSmart.reset(new uint8_t[basicTypesSize[CLONG]]);
             tgtPtr = xSmart.get();
@@ -511,7 +519,7 @@ void executionManager::exeTernaryOpr(const ternaryOperation *pOpr)
     {
         xSmart = createConvertedVariable(
             xInfo->getTypeNum(), superType, xSmart.get());
-        xInfo->updateData(xSmart.get());
+        xInfo->moveInData(xSmart.release());
     }
 }
 
@@ -546,7 +554,7 @@ void executionManager::exeReadArrOpr(const readArrayOperation *pOpr)
                 tgtInfo->getTypeNum(), readedVarInfo->getTypeNum(),
                 readedVarInfo->getData()
             );
-            tgtInfo->updateData(temp.get());
+            tgtInfo->moveInData(temp.release());
         }
         else
         {
@@ -569,7 +577,7 @@ void executionManager::exeReadArrOpr(const readArrayOperation *pOpr)
             auto temp = createConvertedVariable(
                 tgtInfo->getTypeNum(), CARRAY, readedVarInfo->getData()
             );
-            tgtInfo->updateData(temp.get());
+            tgtInfo->updateData(temp.release());
         }
     }
 }
@@ -596,7 +604,7 @@ void executionManager::exeWriteArrOpr(const writeArrayOperation *pOpr)
                 readedVarInfo->getTypeNum(), srcInfo->getTypeNum(),
                 srcInfo->getData()
             );
-            readedVarInfo->updateData(temp.get());
+            readedVarInfo->moveInData(temp.release());
         }
         else
         {
@@ -614,6 +622,8 @@ void executionManager::exeWriteArrOpr(const writeArrayOperation *pOpr)
 
 void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
 {
+    auto &varMgr = getVarMgr();
+
     // check if the function is a builtin one
     auto pBuiltin = getFuncMgr().getBuiltinInfo(pOpr->func);
     if (pBuiltin)
@@ -627,18 +637,18 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             new const void*[pOpr->varVec.size()]);
         for (long i = 0; i < pOpr->varVec.size(); ++i)
         {
-            auto varType = getVarMgr().getVariableTypeNum(pOpr->varVec[i]);
+            auto varType = varMgr.getVariableTypeNum(pOpr->varVec[i]);
             auto paramType = pBuiltin->paramTypeNums[i];
             if (varType == paramType)
             {
-                pargs[i] = getVarMgr().getVariableInfo(pOpr->varVec[i])
+                pargs[i] = varMgr.getVariableInfo(pOpr->varVec[i])
                            ->getData();
             }
             else
             {
                 tmpVars.emplace_back(createConvertedVariable(
                     paramType, varType,
-                    getVarMgr().getVariableInfo(pOpr->varVec[i])->getData()
+                    varMgr.getVariableInfo(pOpr->varVec[i])->getData()
                 ));
                 pargs[i] = tmpVars.back().get();
             }
@@ -656,12 +666,12 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
     nestedCmdIdxs.push_back(0);
 
     // prepare arguments
-    getVarMgr().newScope();
+    varMgr.newScope();
     if (unlikely(pOpr->varVec.size() != pFunc->paramNames.size()))
         throw funcArgumentError(pOpr->func);
     for (auto i = 0; i < pOpr->varVec.size(); ++i)
     {
-        auto varType = getVarMgr().getVariableTypeNum(pOpr->varVec[i]);
+        auto varType = varMgr.getVariableTypeNum(pOpr->varVec[i]);
         auto paramType = pFunc->paramTypeNums[i];
 
         // make type conversion if needed
@@ -669,9 +679,9 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
         {
             auto cvtedVar = createConvertedVariable(
                 paramType, varType,
-                getVarMgr().getVariableInfo(pOpr->varVec[i])->getData()
+                varMgr.getVariableInfo(pOpr->varVec[i])->getData()
             );
-            getVarMgr().initializeVariable(
+            varMgr.initializeVariable(
                 getTypeMgr().getTypenameByNum(paramType),
                 pFunc->paramNames[i],
                 cvtedVar.get(),
@@ -683,9 +693,9 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             // if we are initializing an array argument
             if (varType == CARRAY)
             {
-                getVarMgr().initializeArrayArgument(
+                varMgr.initializeArrayArgument(
                     static_cast<const VariableInfoArray *>(
-                        getVarMgr().getVariableInfo(pOpr->varVec[i])
+                        varMgr.getVariableInfo(pOpr->varVec[i])
                     ),
                     getTypeMgr().getTypenameByNum(pFunc->paramBaseTypeNums[i]),
                     pFunc->paramNames[i],
@@ -694,22 +704,22 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             }
             else
             {
-                getVarMgr().initializeVariable(
+                varMgr.initializeVariable(
                     getTypeMgr().getTypenameByNum(paramType),
                     pFunc->paramNames[i],
-                    getVarMgr().getVariableInfo(pOpr->varVec[i])->getData(),
+                    varMgr.getVariableInfo(pOpr->varVec[i])->getData(),
                     true
                 );
             }
         }
     }
-    getVarMgr().setScopeBoundary();
+    varMgr.setScopeBoundary();
 
     // set return variable type
     nestedRetTypes.push_back(pFunc->retType);
 
     // set function return value to void
-    getVarMgr().setReturnValueToVoid();
+    varMgr.setReturnValueToVoid();
 }
 
 void executionManager::exeFuncRetVoidOpr(const funcRetVoidOperation *pOpr)

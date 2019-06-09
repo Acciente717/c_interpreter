@@ -45,6 +45,7 @@ class VariableInfoBase
     virtual decltype(data) getMutableData() = 0;
     virtual decltype(isReference) getIsReference() const noexcept = 0;
     virtual void updateData(const void *new_data) = 0;
+    virtual void moveInData(void *new_data) = 0;
     virtual void setReference(void *new_ref) = 0;
     virtual const void *getReference() const = 0;
 };
@@ -80,6 +81,7 @@ class VariableInfoArray : public VariableInfoBase
     decltype(data) getMutableData() override;
     decltype(isReference) getIsReference() const noexcept override;
     void updateData(const void *new_data) override;
+    void moveInData(void *new_data) override;
     void setReference(void *new_ref) override;
     const void *getReference() const override;
 
@@ -106,6 +108,7 @@ class VariableInfoSolid : public VariableInfoBase
     decltype(data) getMutableData() override;
     decltype(isReference) getIsReference() const noexcept override;
     void updateData(const void *new_data) override;
+    void moveInData(void *new_data) override;
     void setReference(void *new_ref) override;
     const void *getReference() const override;
 };

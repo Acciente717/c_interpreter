@@ -95,6 +95,11 @@ void VariableInfoArray::updateData(const void *new_data)
         throw badVariableOperation("VariableInfoArray::updateData");
 }
 
+void VariableInfoArray::moveInData(void *new_data)
+{
+    throw badVariableOperation("VariableInfoArray::moveInData");
+}
+
 void VariableInfoArray::setReference(void *new_ref)
 {
     throw badVariableOperation("VariableInfoArray::setReference");
@@ -225,6 +230,12 @@ decltype(VariableInfoSolid::isReference)
 void VariableInfoSolid::updateData(const void *new_data)
 {
     memcpy(data, new_data, baseTypeSize);
+}
+
+void VariableInfoSolid::moveInData(void *new_data)
+{
+    delete[] reinterpret_cast<uint8_t *>(data);
+    data = new_data;
 }
 
 void VariableInfoSolid::setReference(void *new_ref)
