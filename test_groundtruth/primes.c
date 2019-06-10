@@ -1,14 +1,4 @@
-#include <stdio.h>
-
-inline void cputchar(long x)
-{
-    printf("%c", (char) x);
-}
-
-inline void cputint(long x)
-{
-    printf("%ld", x);
-}
+#include "utils.h"
 
 double sqrt(double x)
 {
@@ -48,9 +38,9 @@ long judge(long x)
     return 1;
 }
 
-int main()
+long main()
 {
-    long limit = 100000;
+    long limit = 1000;
     long test = 11;
     long have = 0;
 
@@ -64,6 +54,4 @@ int main()
         }
         test = test + 2;
     }
-
-    return 0;
 }
