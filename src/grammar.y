@@ -555,19 +555,7 @@ ND_CONTROL_COMMAND          : CINT_CTRL_BREAK CINT_DELIM_SEMICOLON
                             ;
 
  /* Do arithmic operation. */
-ND_ARITHMIC_OPERATION       : ND_EXPRESSION CINT_OPR_ASSIGN ND_EXPRESSION CINT_DELIM_SEMICOLON
-                                {
-                                    using namespace cint;
-                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::binaryOperation,
-                                                                std::unique_ptr<binaryOperation>
-                                                                (new binaryOperation
-                                                                {
-                                                                    binaryOprType::assignVariable,
-                                                                    *reinterpret_cast<std::string *>($1.data),
-                                                                    *reinterpret_cast<std::string *>($3.data)
-                                                                }));
-                                }
-                            | ND_EXPRESSION CINT_DELIM_SEMICOLON
+ND_ARITHMIC_OPERATION       : ND_EXPRESSION CINT_DELIM_SEMICOLON
                             ;
 
 
@@ -582,6 +570,20 @@ ND_EXPRESSION               : ND_EXPRESSION_14
 ND_EXPRESSION_14            : ND_EXPRESSION_13
                                 {
                                     $$ = $1;
+                                }
+                            | ND_EXPRESSION_13 CINT_OPR_ASSIGN ND_EXPRESSION_14
+                                {
+                                    using namespace cint;
+                                    cmdSeqStk.top()->cmds.emplace_back(cmdType::binaryOperation,
+                                                                std::unique_ptr<binaryOperation>
+                                                                (new binaryOperation
+                                                                {
+                                                                    binaryOprType::assignVariable,
+                                                                    *reinterpret_cast<std::string *>($1.data),
+                                                                    *reinterpret_cast<std::string *>($3.data)
+                                                                }));
+                                    $$ = cint::yaccInfo(yaccInfo::infoType::varName,
+                                                        std::move(*reinterpret_cast<std::string *>($1.data)));
                                 }
                             ;
 

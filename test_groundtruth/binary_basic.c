@@ -35,4 +35,10 @@ void main()
     fval = !fval;
     cputdouble(fval);
     cputchar(10);
+
+    fval = ival = 2333;
+    cputint(ival);
+    cputchar(10);
+    cputdouble(fval);
+    cputchar(10);
 }
