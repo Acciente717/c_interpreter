@@ -51,6 +51,12 @@ struct array_long build()
     return ar;
 }
 
+void print(struct single_double s)
+{
+    cputdouble(s.val);
+    cputchar(10);
+}
+
 void main()
 {
     long cnt1;
@@ -65,6 +71,8 @@ void main()
     s2.val = 2.333;
     cputdouble(s2.val);
     cputchar(10);
+
+    print(s2);
 
     cputint(s1.val);
     cputchar(10);
@@ -120,8 +128,8 @@ void main()
             cnt3 = 0;
             while (cnt3 < 10)
             {
-                cnt3 = cnt3 + 1;
                 aar[cnt1].ar[cnt2][cnt3] = cnt2;
+                cnt3 = cnt3 + 1;
             }
             cnt2 = cnt2 + 1;
         }
@@ -136,8 +144,8 @@ void main()
             cnt3 = 0;
             while (cnt3 < 10)
             {
-                cnt3 = cnt3 + 1;
                 cputint(aar[cnt1].ar[cnt2][cnt3]);
+                cnt3 = cnt3 + 1;
             }
             cnt2 = cnt2 + 1;
             cputchar(10);
