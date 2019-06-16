@@ -36,7 +36,7 @@ void main()
     cputdouble(fval);
     cputchar(10);
 
-    fval = ival = 2333;
+    fval = (ival = 2333) + 1;
     cputint(ival);
     cputchar(10);
     cputdouble(fval);
