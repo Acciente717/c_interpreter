@@ -168,10 +168,6 @@ ND_FUNCTION_DEFINITION      : ND_TYPE_NAME ND_IDENTIFIER ND_PARAM_LIST ND_BLOCK_
                                     cmdSeqStk.top()->cmds.emplace_back(cint::cmdType::functionReturnVoid,
                                                                        std::unique_ptr<cint::funcRetVoidOperation>
                                                                        (new cint::funcRetVoidOperation()));
-                                    std::cerr << "defining function:"
-                                              << *reinterpret_cast<std::string *>($2.data)
-                                              << std::endl;
-                                    std::cerr.flush();
                                     cint::getFuncMgr().defineFunction(
                                         *reinterpret_cast<std::string *>($2.data),
                                         std::move(gFuncParamTypes),
@@ -191,9 +187,6 @@ ND_FUNCTION_DEFINITION      : ND_TYPE_NAME ND_IDENTIFIER ND_PARAM_LIST ND_BLOCK_
                                     gParamSubscripts.clear();
                                     cmdSeqStk.pop();
                                     assert(cmdSeqStk.size() == 0);
-                                    std::cerr << "defined"
-                                              << std::endl;
-                                    std::cerr.flush();
                                 }
                             ;
 
@@ -883,8 +876,6 @@ ND_IDENTIFIER               : CINT_IDENTIFIER
 
 int yywrap()
 {
-    std::cerr << "entering yywrap" << std::endl;
-    std::cerr.flush();
     ++gReadArgc;
     if (gReadArgc >= gArgc)
         return 1;
@@ -910,18 +901,12 @@ int main(int argc, char **argv)
         exit(-1);
     }
     yyparse();
-    std::cerr << "after yyparse" << std::endl;
-    std::cerr.flush();
 
     auto pAllFuncs = cint::getFuncMgr().getAllDefinedFuncs();
-    std::cerr << "before print" << std::endl;
-    std::cerr.flush();
     for (const auto &i : *pAllFuncs)
     {
         std::cout << "function: " << i.first;
         std::cout << '(';
-        std::cerr << "alive" << std::endl;
-        std::cerr.flush();
         for (long j = 0; j < i.second.paramNames.size(); ++j)
         {
             if (j != 0) std::cout << ", ";
