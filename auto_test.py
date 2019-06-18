@@ -83,8 +83,7 @@ for name in all_groudtruth_code_name:
     test_cnt += 1
 
     # interpret C code
-    subp = subprocess.Popen('./cint',
-                            stdin=open(os.path.join('test_cases', name+INTERPRETED_CODE_EXTENSION)),
+    subp = subprocess.Popen(['./cint', os.path.join('test_cases', name+INTERPRETED_CODE_EXTENSION)],
                             stdout=subprocess.PIPE)
     cint_stdout, cint_stderr = subp.communicate()
     subp.wait()

@@ -6,6 +6,7 @@
 #include <stack>
 #include <cassert>
 #include <climits>
+#include <cstdio>
 
 #include "intermediateCommand.hh"
 #include "yaccInfoStructure.hh"
@@ -32,6 +33,10 @@ cmdSeqStk.top()->cmds.emplace_back(cmdType::ternaryOperation,\
                             }));\
 $$ = cint::yaccInfo(yaccInfo::infoType::varName,\
                     std::move(tmpVar))
+
+int gArgc = 0;         //  global access for argc
+char **gArgv = NULL;   //  global access for argv
+int gReadArgc = 0;     //  the number of processed files
 
 cint::basicTypesEnum gActiveTypeNum;
 
@@ -867,6 +872,32 @@ ND_IDENTIFIER               : CINT_IDENTIFIER
 
 int yywrap()
 {
+    ++gReadArgc;
+    if (gReadArgc >= gArgc)
+        return 1;
+    auto handle = freopen(gArgv[gReadArgc], "r", stdin);
+    if (handle == nullptr)
+    {
+        std::cout << "Error: cannot open input file \""
+                  << gArgv[gReadArgc] << "\"" << std::endl;
+        exit(-1);
+    }
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    gArgc = argc;
+    gArgv = argv;
+    auto handle = freopen(gArgv[++gReadArgc], "r", stdin);
+    if (handle == nullptr)
+    {
+        std::cout << "Error: cannot open input file \""
+                  << gArgv[gReadArgc] << "\"" << std::endl;
+        exit(-1);
+    }
+    yyparse();
+
     auto pAllFuncs = cint::getFuncMgr().getAllDefinedFuncs();
     for (const auto &i : *pAllFuncs)
     {
@@ -889,5 +920,5 @@ int yywrap()
     cint::executionManager exeMgr("main");
     exeMgr.run();
 
-    return 1;
+    return 0;
 }
