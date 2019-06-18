@@ -97,7 +97,13 @@ void VariableInfoArray::updateData(const void *new_data)
 
 void VariableInfoArray::moveInData(void *new_data)
 {
-    throw badVariableOperation("VariableInfoArray::moveInData");
+    if (isLeaf)
+    {
+        memcpy(data, new_data, baseTypeSize);
+        delete[] reinterpret_cast<uint8_t *>(new_data);
+    }
+    else
+        throw badVariableOperation("VariableInfoArray::moveInData");
 }
 
 void VariableInfoArray::setReference(void *new_ref)
@@ -242,8 +248,16 @@ void VariableInfoSolid::updateData(const void *new_data)
 
 void VariableInfoSolid::moveInData(void *new_data)
 {
-    delete[] reinterpret_cast<uint8_t *>(data);
-    data = new_data;
+    if (isReference)
+    {
+        memcpy(data, new_data, baseTypeSize);
+        delete[] reinterpret_cast<uint8_t *>(new_data);
+    }
+    else
+    {
+        delete[] reinterpret_cast<uint8_t *>(data);
+        data = new_data;
+    }
 }
 
 void VariableInfoSolid::setReference(void *new_ref)
