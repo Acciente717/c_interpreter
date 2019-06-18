@@ -1,6 +1,7 @@
 /* Copyright @2019 Zhiyao Ma */
 #include <thread>
 #include <chrono>
+#include <dlfcn.h>
 
 #include "utils.hh"
 #include "executionManager.hh"
@@ -112,6 +113,124 @@ static std::unique_ptr<uint8_t[]> createConvertedVariable(
         throw unknownSwitchCase("createConvertedVariable");
     }
     return new_data;
+}
+
+static bool invokeCompiledFunction(const funcCallOperation *pOpr,
+                                   functionInfo *pFunc,
+                                   long *pRetVal)
+{
+    auto &varMgr = getVarMgr();
+
+    // check for the argument type to make sure it is suitable for JIT
+    // execution. If not, fall back to interpreting execution.
+    if (unlikely(pFunc->status == JIT_AVAILABLE))
+    {
+        // currently only functions less than 6 arguments are supported,
+        // and only returning void or long are supported
+        if (pFunc->paramTypeNums.size() > 6 ||
+            (pFunc->retType != CLONG && pFunc->retType != CVOID))
+            return false;
+
+        ssize_t argNum = pFunc->paramBaseTypeNums.size();
+        for (ssize_t i = 0; i < argNum; ++i)
+        {
+            // currently only integer and pointer are supported
+            if (pFunc->paramTypeNums[i] != CARRAY
+                && pFunc->paramTypeNums[i] != CLONG)
+                return false;
+        }
+        pFunc->status = JIT_DIRECT;
+    }
+    if (unlikely(pFunc->status != JIT_DIRECT))
+        throw badJITInvocation(pOpr->func);
+
+    // prepare arguments for JIT invocation
+    std::vector<unsigned long> args;
+    std::vector<std::unique_ptr<uint8_t[]>> ptrs;
+    for (ssize_t i = 0; i < pOpr->varVec.size(); ++i)
+    {
+        auto varType = varMgr.getVariableTypeNum(pOpr->varVec[i]);
+        auto paramType = pFunc->paramTypeNums[i];
+
+        // make type conversion if needed
+        if (varType != paramType)
+        {
+            auto cvtedVar = createConvertedVariable(
+                paramType, varType,
+                varMgr.getVariableInfo(pOpr->varVec[i])->getData()
+            );
+            args.push_back(*reinterpret_cast<const long*>(cvtedVar.get()));
+            ptrs.emplace_back(std::move(cvtedVar));
+        }
+        else
+        {
+            // if we are initializing an array argument
+            if (varType == CARRAY)
+            {
+                args.push_back(
+                    *reinterpret_cast<const long*>(
+                        varMgr.getVariableInfo(pOpr->varVec[i])->getData()));
+            }
+            // otherwise, the only possibility is that we are
+            // initializing an argument of type `long`
+            else
+            {
+                args.push_back(
+                    *reinterpret_cast<const long*>(
+                        varMgr.getVariableInfo(pOpr->varVec[i])->getData()));
+            }
+        }
+    }
+
+    unsigned long retVal;
+    switch (pFunc->paramTypeNums.size())
+    {
+    case 0:
+        retVal =
+        reinterpret_cast<long(*)(void)>(pFunc->compiledEntrance)
+            ();
+        break;
+    case 1:
+        retVal =
+        reinterpret_cast<long(*)(unsigned long)>(pFunc->compiledEntrance)
+            (args[0]);
+        break;
+    case 2:
+        retVal =
+        reinterpret_cast<long(*)(unsigned long, unsigned long)>
+        (pFunc->compiledEntrance)(args[0], args[1]);
+        break;
+    case 3:
+        retVal =
+        reinterpret_cast<long(*)(unsigned long, unsigned long, unsigned long)>
+        (pFunc->compiledEntrance)(args[0], args[1], args[2]);
+        break;
+    case 4:
+        retVal =
+        reinterpret_cast<long(*)(unsigned long, unsigned long, unsigned long,
+                                 unsigned long)>
+        (pFunc->compiledEntrance)(args[0], args[1], args[2], args[3]);
+        break;
+    case 5:
+        retVal =
+        reinterpret_cast<long(*)(unsigned long, unsigned long, unsigned long,
+                                 unsigned long, unsigned long)>
+        (pFunc->compiledEntrance)(args[0], args[1], args[2], args[3], args[4]);
+        break;
+    case 6:
+        retVal =
+        reinterpret_cast<long(*)(unsigned long, unsigned long, unsigned long,
+                                 unsigned long, unsigned long, unsigned long)>
+        (pFunc->compiledEntrance)(args[0], args[1], args[2],
+                                  args[3], args[4], args[5]);
+        break;
+    default:
+        throw unknownSwitchCase("invokeCompiledFunction");
+    }
+
+    if (pRetVal)
+        *pRetVal = retVal;
+    return true;
 }
 
 inline void longArithmic(ternaryOprType oprNum, void *px,
@@ -660,8 +779,102 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
         return;
     }
 
-    // push new cmds
+    // check if the function enables JIT feature
     auto pFunc = getFuncMgr().getFunction(pOpr->func);
+    switch (pFunc->status.load())
+    {
+    case NO_JIT:
+    case COMPILING:
+        break;
+    case NOT_COMPILED:
+        pFunc->fut = std::async(functionManager::compileFunction, pFunc);
+        break;
+    case COMPILED:
+        {
+            std::string codePath = gArgv[pFunc->fileIdx];
+            auto found = codePath.find_last_of("/");
+            std::string codeDir, codeName;
+            if (found == std::string::npos)
+            {
+                codeDir = ".", codeName = codePath;
+            }
+            else
+            {
+                codeDir = codePath.substr(0, found);
+                codeName = codePath.substr(found + 1);
+            }
+            found = codeName.find_last_of(".");
+            if (found == std::string::npos)
+                found = codeName.size();
+            codeName.resize(found);
+            codeName += ".so";
+            std::string dylibPath = codeDir + "/__cint_cache__/"
+                                    + "shared_lib/" + codeName;
+            auto handle = dlopen(dylibPath.c_str(), RTLD_LOCAL);
+            if (handle == nullptr)
+            {
+                pFunc->status = NO_JIT;
+                std::cerr << "\u001b[31m"
+                          << "Failed to load dynamic library for function ["
+                          << pOpr->func << "] falling back to normal "
+                          << "interpreting execution"
+                          << "\u001b[0m" << std::endl;
+                break;
+            }
+            auto entrance = dlsym(handle, pOpr->func.c_str());
+            if (entrance == nullptr)
+            {
+                dlclose(handle);
+                pFunc->status = NO_JIT;
+                std::cerr << "\u001b[31m"
+                          << "Failed to load symbol from dynamic library for"
+                          << " function [" << pOpr->func << "] falling"
+                          << " back to normal interpreting execution"
+                          << "\u001b[0m" << std::endl;
+                break;
+            }
+            pFunc->compiledEntrance = entrance;
+        }
+        pFunc->fut.get();
+        pFunc->status = JIT_AVAILABLE;
+        std::cerr << "\u001b[31m"
+                  << "JIT is available for function ["
+                  << pOpr->func << "]\u001b[0m" << std::endl;
+        // fall through
+    case JIT_AVAILABLE:
+    case JIT_DIRECT:
+        if (pFunc->retType == CVOID)
+        {
+            auto success = invokeCompiledFunction(pOpr, pFunc, nullptr);
+            if (success)
+            {
+                varMgr.setReturnValueToVoid();
+                return;
+            }
+        }
+        else
+        {
+            long retVal;
+            auto success = invokeCompiledFunction(pOpr, pFunc, &retVal);
+            if (success)
+            {
+                varMgr.updateReturnValue("long", &retVal);
+                return;
+            }
+        }
+        // if we reach here, it means the JIT execution failed,
+        // fall back to interpreting execution
+        pFunc->status = NO_JIT;
+        std::cerr << "\u001b[31m"
+                  << "Failed to invoke function ["
+                  << pOpr->func << "] in JIT mode, falling back"
+                  << "\u001b[0m" << std::endl;
+        break;
+    default:
+        throw unknownSwitchCase("executionManager::exeFuncCallOpr");
+    }
+
+    // push new cmds
     nestedCmds.push_back(&pFunc->cmds);
     nestedCmdIdxs.push_back(0);
 
@@ -1089,7 +1302,7 @@ void executionManager::run()
         ++nestedCmdIdxs.back();
         // printCmd(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1], 0);
         // std::cout.flush();
-        // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(5));
         execute(nestedCmds.back()->cmds[nestedCmdIdxs.back() - 1]);
     }
 }

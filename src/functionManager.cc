@@ -42,25 +42,32 @@ void functionManager::defineFunction(
     std::vector<std::vector<long>> &&paramSubscripts,
     std::vector<std::string> &&paramNames,
     long retType,
+    bool isJITEnabled,
+    int fileIdx,
     cmdSeq &&cmds)
 {
     auto iter = funcs.find(name);
     if (iter != funcs.end())
         throw redefiningFunction(name);
-    funcs[name] = {std::move(paramTypeNums),
-                   std::move(paramBaseTypeNums),
-                   std::move(paramSubscripts),
-                   std::move(paramNames),
-                   retType,
-                   std::move(cmds)};
+    funcs.emplace(std::piecewise_construct,
+                  std::forward_as_tuple(name),
+                  std::forward_as_tuple(
+                      std::move(paramTypeNums),
+                      std::move(paramBaseTypeNums),
+                      std::move(paramSubscripts),
+                      std::move(paramNames),
+                      retType,
+                      isJITEnabled,
+                      fileIdx,
+                      std::move(cmds)));
 }
 
-const functionInfo * functionManager::getFunction(const std::string &name)
+functionInfo * functionManager::getFunction(const std::string &name)
 {
     auto iter = funcs.find(name);
     if (iter == funcs.end())
         throw unknownFunction(name);
-    return &funcs[name];
+    return &iter->second;
 }
 
 const builtinFuncInfo * functionManager::getBuiltinInfo(
@@ -95,6 +102,22 @@ void functionManager::invokeBuiltin(const std::string &funcName,
             "unknown builtin function number: "
             + std::to_string(iter->second.builtinNum));
     }
+}
+
+void functionManager::compileFunction(functionInfo *pFunc)
+{
+    std::string currentPath = gArgv[0];
+    auto found = currentPath.find_last_of("/");
+    std::string currentDir;
+    if (found != std::string::npos)
+        currentDir = currentPath.substr(0, found + 1);
+    else
+        currentDir = "./";
+    std::string fileName = gArgv[pFunc->fileIdx];
+    auto systemCmd = currentDir + "jit.py " + fileName;
+    pFunc->status = COMPILING;
+    system(systemCmd.c_str());
+    pFunc->status = COMPILED;
 }
 
 }  // namespace cint

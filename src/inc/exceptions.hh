@@ -188,6 +188,18 @@ class badVariableOperation : public std::exception
     }
 };
 
+class badJITInvocation : public std::exception
+{
+    std::string msg;
+ public:
+    explicit badJITInvocation(const std::string &s)
+        : msg(s) {}
+    const char *what() const noexcept override
+    {
+        return msg.c_str();
+    }
+};
+
 }  // namespace cint
 
 #endif  // SRC_INC_EXCEPTIONS_HH

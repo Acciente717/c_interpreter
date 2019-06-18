@@ -38,6 +38,8 @@ int gArgc = 0;         //  global access for argc
 char **gArgv = NULL;   //  global access for argv
 int gReadArgc = 0;     //  the number of processed files
 
+bool gJITDeclareEnabled = false;
+
 cint::basicTypesEnum gActiveTypeNum;
 
 std::vector<long> gFuncParamTypes;
@@ -175,6 +177,8 @@ ND_FUNCTION_DEFINITION      : ND_TYPE_NAME ND_IDENTIFIER ND_PARAM_LIST ND_BLOCK_
                                         cint::getTypeMgr().getTypeNumByName(
                                             *reinterpret_cast<std::string*>($1.data)
                                         ),
+                                        gJITDeclareEnabled,
+                                        gReadArgc,
                                         std::move(*cmdSeqStk.top())
                                     );
                                     

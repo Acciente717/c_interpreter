@@ -1,6 +1,10 @@
 
 %%
 
+ /* Reserved JIT Switch Keywords */
+"#define __JIT__"  { gJITDeclareEnabled = true;  }
+"#undef __JIT__"   { gJITDeclareEnabled = false; }
+
  /* Reserved Type Keywords */
 long      { return CINT_TYPE_LONG; }
 double   { return CINT_TYPE_DOUBLE; }

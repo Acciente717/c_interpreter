@@ -5,8 +5,14 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <atomic>
+#include <future>
 
 #include "intermediateCommand.hh"
+
+extern int gArgc;         //  global access for argc
+extern char **gArgv;      //  global access for argv
+extern int gReadArgc;     //  the number of processed files
 
 namespace cint
 {
@@ -17,6 +23,16 @@ enum builtinFuncEnum
     CPUTCHAR,
     CPUTDOUBLE,
     BUILTIN_FUNC_NUM
+};
+
+enum functionStatus
+{
+    NO_JIT,
+    NOT_COMPILED,
+    COMPILING,
+    COMPILED,
+    JIT_AVAILABLE,
+    JIT_DIRECT
 };
 
 struct builtinFuncInfo
@@ -32,7 +48,24 @@ struct functionInfo
     std::vector<std::vector<long>> paramSubscripts;
     std::vector<std::string> paramNames;
     long retType;
+    std::atomic_int status;
+    void *compiledEntrance;
+    std::future<void> fut;
+    int fileIdx;
     cmdSeq cmds;
+
+    functionInfo(std::vector<long> &&_paramTypeNums,
+                 std::vector<long> &&_paramBaseTypeNums,
+                 std::vector<std::vector<long>> &&_paramSubscripts,
+                 std::vector<std::string> &&_paramNames,
+                 long _retType, bool _isJITable, int _fileIdx,
+                 cmdSeq &&_cmds)
+    : paramTypeNums(std::move(_paramTypeNums)),
+      paramBaseTypeNums(std::move(_paramBaseTypeNums)),
+      paramSubscripts(std::move(_paramSubscripts)),
+      paramNames(std::move(_paramNames)),
+      retType(_retType), status(_isJITable ? NOT_COMPILED : NO_JIT),
+      compiledEntrance(0), fileIdx(_fileIdx), cmds(std::move(_cmds)) {}
 };
 
 class functionManager
@@ -50,11 +83,14 @@ class functionManager
                         std::vector<std::vector<long>> &&paramSubscripts,
                         std::vector<std::string> &&paramNames,
                         long retType,
+                        bool JITEnabled,
+                        int fileIdx,
                         cmdSeq &&cmds);
     inline const decltype(funcs) *getAllDefinedFuncs();
-    const functionInfo * getFunction(const std::string &name);
+    functionInfo * getFunction(const std::string &name);
     const builtinFuncInfo * getBuiltinInfo(const std::string &funcName);
     void invokeBuiltin(const std::string &funcName, const void *pparams[]);
+    static void compileFunction(functionInfo *pFunc);
 };
 
 functionManager &getFuncMgr();
