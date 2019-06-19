@@ -14,11 +14,13 @@ Now we have `cint` at `c_interpreter/`
 
 ## Run
 
-Run the command `./cint < input_code`. The program reads the C code from `stdin`, and output at `stdout`.
+Run the command `./cint [input_code]`. The program reads the C code from the file, and output at `stdout`.
 
 ## Testing
 
-Run `./auto_test.py` to invoke automatic testing.
+Run `./auto_test.py` to invoke automatic testing for interpreting execution.
+
+Run `./jit_test.py` to invoke automatic testing for JIT execution.
 
 
 ### Unit Test Cases
