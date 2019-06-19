@@ -1,5 +1,5 @@
 all: exceptions intermediateCommand representations typeManager functionManager executionManager variableManager utils yaccInfoStructure grammar lex
-	g++ -std=c++14 -O2 -o cint src/grammar.o src/intermediateCommand.o src/utils.o src/yaccInfoStructure.o src/typeManager.o src/functionManager.o src/variableManager.o src/executionManager.o -ly -lfl -lpthread
+	g++ -std=c++14 -O2 -o cint src/grammar.o src/intermediateCommand.o src/utils.o src/yaccInfoStructure.o src/typeManager.o src/functionManager.o src/variableManager.o src/executionManager.o -ly -lfl -ldl -lpthread
 
 exceptions:	src/inc/exceptions.hh
 
