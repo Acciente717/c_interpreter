@@ -787,7 +787,8 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
     case COMPILING:
         break;
     case NOT_COMPILED:
-        pFunc->fut = std::async(functionManager::compileFunction, pFunc);
+        pFunc->fut = std::async(std::launch::async,
+                                functionManager::compileFunction, pFunc);
         break;
     case COMPILED:
         {
