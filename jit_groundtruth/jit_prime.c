@@ -1,6 +1,6 @@
 #include "utils.h"
 
-double sqrt(double x)
+double mysqrt(double x)
 {
     double nxt = 1;
     double pre = 1;
@@ -22,7 +22,7 @@ long judge(long x)
     if (x % 3 == 0) { return 0; }
     if (x % 5 == 0) { return 0; }
     if (x % 7 == 0) { return 0; }
-    long limit = sqrt(x) + 0.5;
+    long limit = mysqrt(x) + 0.5;
     long i = 11;
     while (i <= limit)
     {

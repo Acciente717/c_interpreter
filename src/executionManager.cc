@@ -811,7 +811,7 @@ void executionManager::exeFuncCallOpr(const funcCallOperation *pOpr)
             codeName += ".so";
             std::string dylibPath = codeDir + "/__cint_cache__/"
                                     + "shared_lib/" + codeName;
-            auto handle = dlopen(dylibPath.c_str(), RTLD_LOCAL);
+            auto handle = dlopen(dylibPath.c_str(), RTLD_LAZY);
             if (handle == nullptr)
             {
                 pFunc->status = NO_JIT;
