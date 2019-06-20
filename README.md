@@ -3,6 +3,12 @@ A C language interpreter.
 
 ## Setup
 
+Dependencies
+
+- g++ with c++14 support
+- flex & byacc/bison
+- Python3
+
 Build the interpreter, run
 
 ```
@@ -148,3 +154,30 @@ Run `./jit_test.py` to invoke automatic testing for JIT execution.
 #### primes
 
 - Output the first 1000 prime numbers beginning with 11.
+
+### JIT Test Cases
+
+#### JIT Primes
+
+- Judgement of primes is done in JIT compiled function
+
+#### JIT Array
+
+- Pass an array to JIT compiled function, and let it fill the array.
+
+#### JIT Return
+
+- Test returning value from a JIT function.
+
+#### JIT Struct
+
+- Test passing structure array to JIT function.
+- Test modifying structure field in JIT function.
+
+#### JIT Robust
+
+- Test falling back to interpreting mode when the function is not qualified to run in JIT mode, including cases below
+- When the function returns value other than `void` or `long`
+- When the function has parameter other than array or `long`
+- When the function has more than 6 parameters
+
